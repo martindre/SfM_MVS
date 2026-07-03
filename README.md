@@ -21,7 +21,6 @@ brew install --cask quarto
 - `theorie.qmd`: SfM/MVS-Theorie und interaktive Punktwolken-Demo
 - `vergleich.qmd`: Vergleich mit NeRF und 3D Gaussian Splatting
 - `hands-on.qmd`: praktischer Workflow mit COLMAP, openMVG/OpenMVS und Open3D
-- `eigener-scan.qmd`: Konzept für den eigenen Scan als X-Teil
 - `quellen.qmd`: interne Dokumente und priorisierte Quellen
 - `assets/`: Bilder, JavaScript, Modelle und spätere Web-Assets
 

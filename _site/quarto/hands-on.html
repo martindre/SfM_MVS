@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Praktisches Beispiel – SfM &amp; MVS</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+</style>
+
+
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-html-e82cabd1c1379058ebcaccc337c10230.min.css" rel="stylesheet" append-hash="true" data-mode="light">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<style>html{ scroll-behavior: smooth; }</style>
+
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Praktisches Beispiel</h1>
+<p class="subtitle">COLMAP-Ausgaben als Punktwolke und Mesh</p>
+
+</header>
+
+
+<div class="site-section-nav">
+<p><a href="../quarto/index.html">Home</a> <a href="../quarto/einleitung.html">Motivation &amp; Use-Cases</a> <a href="../quarto/theorie.html">Theorie</a> <a href="../quarto/vergleich.html">Methoden-Vergleich</a> <a href="../quarto/hands-on.html" class="active">Praktisches Beispiel</a> <a href="../quarto/quellen.html">Quellen</a></p>
+</div>
+<style>
+.practical-hero {
+  margin: 1rem 0 2rem;
+  max-width: 82ch;
+}
+
+.practical-hero p,
+.workflow-note p,
+.model-card p,
+.code-card p {
+  line-height: 1.65;
+}
+
+.model-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0 2.5rem;
+}
+
+.scan-pair-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 0.9rem 0 2rem;
+}
+
+.lidar-scan-title {
+  margin-top: 1.6rem;
+  margin-bottom: 0.35rem;
+  font-size: 1.15rem;
+}
+
+.model-card,
+.workflow-note,
+.code-card {
+  border: 1px solid var(--sfm-line, #d7e0e5);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(23, 32, 38, 0.06);
+}
+
+.model-card {
+  overflow: hidden;
+}
+
+.model-card-header {
+  padding: 1rem 1rem 0.75rem;
+}
+
+.model-card-header h2,
+.code-card h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+}
+
+.model-card-header p {
+  margin-bottom: 0;
+}
+
+.model-viewer {
+  position: relative;
+  min-height: 390px;
+  background:
+    linear-gradient(180deg, rgba(246, 248, 249, 0.96), rgba(230, 236, 241, 0.96));
+  border-top: 1px solid var(--sfm-line, #d7e0e5);
+}
+
+.model-viewer canvas {
+  width: 100%;
+  height: 390px;
+  display: block;
+  cursor: grab;
+}
+
+.model-viewer canvas:active {
+  cursor: grabbing;
+}
+
+.viewer-status {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--sfm-muted, #5a6670);
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(23, 32, 38, 0.08);
+}
+
+.viewer-controls {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.viewer-controls button,
+.viewer-controls a {
+  border: 1px solid rgba(23, 32, 38, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--sfm-ink, #172026);
+  padding: 0.42rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.viewer-controls button:hover,
+.viewer-controls a:hover {
+  background: var(--sfm-blue, #1f6feb);
+  color: #fff;
+}
+
+.workflow-note,
+.code-card {
+  padding: 1rem 1.1rem;
+  margin: 1.25rem 0;
+}
+
+.workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 2rem;
+}
+
+.workflow-step {
+  border: 1px solid var(--sfm-line, #d7e0e5);
+  border-radius: 8px;
+  padding: 0.9rem;
+  background: #f8fafb;
+}
+
+.workflow-step strong {
+  display: block;
+  color: var(--sfm-blue, #1f6feb);
+  margin-bottom: 0.35rem;
+}
+
+.code-links {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 920px) {
+  .scan-pair-grid,
+  .workflow-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* COLMAP vs LiDAR comparison */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin: 1rem 0 2.5rem;
+}
+
+.compare-col {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.compare-label {
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.compare-colmap { background: rgba(31, 111, 235, 0.12); color: #1f6feb; }
+.compare-lidar  { background: rgba(196, 73, 45, 0.12);  color: #c4492d; }
+
+/* LiDAR accordion (wie Motivation & Use-Cases) */
+.lidar-accordion {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 2.5rem;
+}
+
+.lidar-item {
+  border: 1px solid var(--sfm-line, #d7e0e5);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(23, 32, 38, 0.06);
+}
+
+.lidar-item summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1rem 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(127, 127, 127, 0.035);
+  transition: background 0.18s ease;
+}
+
+.lidar-item summary::-webkit-details-marker { display: none; }
+
+.lidar-item summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(31, 111, 235, 0.12);
+  color: #1f6feb;
+  font-weight: 800;
+  font-size: 1.05rem;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.lidar-item[open] summary { background: rgba(31, 111, 235, 0.08); }
+.lidar-item[open] summary::after { content: "\2013"; background: #1f6feb; color: #fff; }
+
+.lidar-title { font-weight: 750; font-size: 1.02rem; }
+.lidar-meta {
+  margin-left: auto;
+  margin-right: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--sfm-muted, #5a6670);
+  white-space: nowrap;
+}
+
+.lidar-body { padding: 1rem 1.15rem 1.25rem; }
+.lidar-body .model-card { box-shadow: none; }
+.compare-section-intro { max-width: 82ch; line-height: 1.65; }
+
+.capture-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 1.7rem;
+}
+
+.capture-grid figure {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--sfm-line, #d7e0e5);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(23, 32, 38, 0.06);
+}
+
+.capture-grid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.capture-grid figcaption {
+  padding: 0.55rem 0.7rem;
+  color: var(--sfm-muted, #5a6670);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+@media (max-width: 920px) {
+  .compare-grid { grid-template-columns: 1fr; }
+  .capture-grid { grid-template-columns: 1fr; }
+}
+
+</style>
+<section id="praktisches-beispiel-vom-rekonstruktionsergebnis-zum-3d-modell" class="practical-hero">
+<h1>Praktisches Beispiel: Vom Rekonstruktionsergebnis zum 3D-Modell</h1>
+</section>
+<h2 id="colmap-vs.-lidar-dieselbe-statue-zwei-verfahren" class="anchored">COLMAP vs.&nbsp;LiDAR: dieselbe Statue, zwei Verfahren</h2>
+<div class="compare-section-intro">
+<p>Dieselbe rund <strong>40&nbsp;cm große Statue</strong>, einmal photogrammetrisch mit <strong>COLMAP</strong> rekonstruiert und einmal per <strong>LiDAR</strong> erfasst. Der LiDAR-Scan dient hier als <strong>Negativbeispiel</strong>: Bei kleinen, detailreichen Objekten stoßen viele LiDAR-Sensoren an ihre Auflösungsgrenze, sodass Löcher, Rauschen und verschmierte Details entstehen, während die bildbasierte Rekonstruktion feinere Strukturen auflöst.</p>
+<p><strong>Anmerkung:</strong> Für das tatsächliche Erstellen des 3D-Modells mit SfM/MVS wurden mehr als diese drei Bilder verwendet. Sie dienen lediglich dazu, das eingescannte Objekt zu zeigen.</p>
+</div>
+<div class="capture-grid" aria-label="Eingabefotos fuer die COLMAP-Rekonstruktion">
+  <figure>
+    <img src="images/Statue_Nima__1.png" alt="Eingabefoto der Statue fuer die SfM-MVS-Rekonstruktion, Ansicht 1">
+    <figcaption>Ausgangsfoto 1</figcaption>
+  </figure>
+  <figure>
+    <img src="images/Statue_Nima__2.png" alt="Eingabefoto der Statue fuer die SfM-MVS-Rekonstruktion, Ansicht 2">
+    <figcaption>Ausgangsfoto 2</figcaption>
+  </figure>
+  <figure>
+    <img src="images/Nima_Staue__3.png" alt="Eingabefoto der Statue fuer die SfM-MVS-Rekonstruktion, Ansicht 3">
+    <figcaption>Ausgangsfoto 3</figcaption>
+  </figure>
+</div>
+
+<div class="compare-grid">
+  <div class="compare-col">
+    <div class="compare-label compare-colmap">COLMAP / Photogrammetrie</div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">AC-Statue: COLMAP-Sparse-Punktwolke</h2>
+      <p>Die spärliche Punktwolke aus der SfM-Phase von COLMAP: die rekonstruierten Feature-Punkte vor der dichten Rekonstruktion und Vermaschung (27.239 Punkte).</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-flip-y="" data-src="models/comparison/AC_statue_sparse_web.ply" data-mode="points" data-point-size="2.0" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der COLMAP-Sparse-Punktwolke der AC-Statue"></canvas>
+      <div class="viewer-status">Lade Punktwolke...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/comparison/AC_statue_sparse_full.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">AC-Statue (COLMAP)</h2>
+      <p>Photogrammetrische Rekonstruktion der ≈40&nbsp;cm großen Statue mit COLMAP. Web-Version (≈21.000 Dreiecke).</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-flip-y="" data-src="models/comparison/AC_statue_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer der COLMAP-Statue"></canvas>
+      <div class="viewer-status">Lade COLMAP-Statue...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/comparison/AC_statue_web.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="compare-col">
+    <div class="compare-label compare-lidar">LiDAR (Negativbeispiel)</div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">AC-Statue: LiDAR-Punktwolke</h2>
+      <p>Dieselbe Statue als LiDAR-Punktwolke. Sichtbar werden geringere Punktdichte und Rauschen.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/comparison/nima_points_web.ply" data-mode="points" data-point-size="2.0" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke"></canvas>
+      <div class="viewer-status">Lade LiDAR-Punktwolke...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/comparison/nima_points_full.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">AC-Statue: LiDAR-Mesh</h2>
+      <p>Das aus dem LiDAR-Scan abgeleitete Mesh – mit Löchern und verschmierten Details als Negativbeispiel.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/comparison/nima_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/comparison/nima_mesh_full.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+<h2 id="beispiele-aus-dem-internet-colmap" class="anchored">Beispiele aus dem Internet (COLMAP)</h2>
+<p>Punktwolke und Mesh als typische Ergebnisformen einer SfM/MVS- bzw. COLMAP-Pipeline – vom kleinen Testobjekt bis zum kompletten Gebäude.</p>
+<div class="model-stack">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Bunny: Punktwolke</h2>
+      <p>Die Punktwolke steht für ein typisches Zwischenergebnis: viele einzelne 3D-Punkte, aber noch keine geschlossene Oberfläche.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/examples/bunny_points.ply" data-mode="points" data-point-size="2.1" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der Bunny-Punktwolke"></canvas>
+      <div class="viewer-status">Lade Punktwolke...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/examples/bunny_points.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Bunny: Mesh</h2>
+      <p>Das Mesh verbindet die rekonstruierten Punkte zu Dreiecken – eine explizite Oberfläche, die exportiert und weiterverarbeitet werden kann.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/examples/bunny_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des Bunny-Meshes"></canvas>
+      <div class="viewer-status">Lade Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/examples/bunny_mesh.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Wohnzimmer: Punktwolke</h2>
+      <p>Eine größere rekonstruierte Innenraum-Szene. Sie zeigt, dass nicht nur einzelne Objekte, sondern auch ganze Umgebungen als Punktwolke darstellbar sind.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/examples/wohnzimmer_points.ply" data-mode="points" data-point-size="1.15" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der Wohnzimmer-Punktwolke"></canvas>
+      <div class="viewer-status">Lade Wohnzimmer...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/examples/wohnzimmer_points.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">South Building: Sparse-Punktwolke</h2>
+      <p>Die spärliche Punktwolke aus der SfM-Phase von COLMAP: die rekonstruierten Feature-Punkte vor der dichten Rekonstruktion und Vermaschung (61.123 Punkte).</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-flip-y="" data-src="models/colmap/southBuilding_sparse_web.ply" data-mode="points" data-point-size="1.6" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der South-Building-Sparse-Punktwolke"></canvas>
+      <div class="viewer-status">Lade Punktwolke...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/colmap/southBuilding_sparse.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">South Building: COLMAP-Mesh</h2>
+      <p>Eine COLMAP-Rekonstruktion eines kompletten Gebäudes. Gezeigt als reduzierte Web-Version (≈11.000 Dreiecke); das Originalmesh hat über 29 Mio. Dreiecke.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-flip-y="" data-src="models/colmap/southBuilding_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des South-Building-Meshes"></canvas>
+      <div class="viewer-status">Lade South Building...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/colmap/southBuilding_web.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+<h2 id="colmap-grenzfall-texturlose-reflektierende-oberflächen" class="anchored">COLMAP-Grenzfall: texturlose &amp; reflektierende Oberflächen</h2>
+<div class="compare-section-intro">
+<p>Photogrammetrie braucht wiedererkennbare Bildmerkmale, um Punkte über mehrere Aufnahmen hinweg zuzuordnen. Bei <strong>texturlosen, spiegelnden oder transparenten Oberflächen</strong> fehlen diese Merkmale oder wandern scheinbar mit dem Blickwinkel. COLMAP findet dann zu wenige stabile Korrespondenzen – das Ergebnis wird lückenhaft, verrauscht und verzerrt. Das folgende Mesh ist ein solches <strong>Negativbeispiel</strong>.</p>
+</div>
+<div class="model-stack">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">COLMAP-Fehlschlag: texturlos &amp; reflektierend</h2>
+      <p>Texturlose, spiegelnde oder transparente Flächen liefern kaum stabile Bildmerkmale. Dadurch entstehen Löcher, Rauschen und verzerrte Geometrie. Web-Version (≈16.000 Dreiecke); das vollständige Mesh hat rund 1,9 Mio. Dreiecke.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-flip-y="" data-src="models/comparison/statue_fail_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des COLMAP-Fehlschlags"></canvas>
+      <div class="viewer-status">Lade Modell...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/comparison/statue_fail_web.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+<h2 id="lidar-scans" class="anchored">LiDAR-Scans</h2>
+<div class="lidar-accordion">
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 1: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 1: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 1. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_1_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 1"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Points/statue_1_points.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 1: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_1_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 1"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Mesh/statue_1_mesh.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 2: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 2: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 2. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_2_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 2"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Points/statue_2_points.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 2: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_2_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 2"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Mesh/statue_2_mesh.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 3: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 3: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 3. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_3_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 3"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Points/statue_3_points.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 3: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_3_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 3"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Mesh/statue_3_mesh.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 4: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 4: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 4. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_4_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 4"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Points/statue_4_points.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 4: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_4_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 4"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Mesh/statue_4_mesh.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 5: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 5: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 5. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_5_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 5"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Points/statue_5_points.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2 class="anchored">Scan 5: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer="" data-src="models/LidarScans/Web/statue_5_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 5"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset="">Reset</button>
+        <a href="models/LidarScans/Mesh/statue_5_mesh.ply" download="">PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+</div>
+<script>
+function parseAsciiPly(text) {
+  const lines = text.trim().split(/\r?\n/);
+  let vertexCount = 0;
+  let faceCount = 0;
+  let headerEnd = -1;
+  let activeElement = "";
+  const vertexProperties = [];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (line.startsWith("element vertex")) {
+      vertexCount = Number(line.split(/\s+/)[2]);
+      activeElement = "vertex";
+    } else if (line.startsWith("element face")) {
+      faceCount = Number(line.split(/\s+/)[2]);
+      activeElement = "face";
+    } else if (activeElement === "vertex" && line.startsWith("property") && !line.includes(" list ")) {
+      const parts = line.split(/\s+/);
+      vertexProperties.push(parts[parts.length - 1]);
+    }
+    if (line === "end_header") {
+      headerEnd = i;
+      break;
+    }
+  }
+
+  const vertices = [];
+  const colors = [];
+  const propertyIndex = Object.fromEntries(vertexProperties.map((name, index) => [name, index]));
+  const xIndex = propertyIndex.x ?? 0;
+  const yIndex = propertyIndex.y ?? 1;
+  const zIndex = propertyIndex.z ?? 2;
+  const redIndex = propertyIndex.red ?? propertyIndex.r ?? propertyIndex.diffuse_red;
+  const greenIndex = propertyIndex.green ?? propertyIndex.g ?? propertyIndex.diffuse_green;
+  const blueIndex = propertyIndex.blue ?? propertyIndex.b ?? propertyIndex.diffuse_blue;
+
+  for (let i = 0; i < vertexCount; i += 1) {
+    const parts = lines[headerEnd + 1 + i].trim().split(/\s+/).map(Number);
+    vertices.push([parts[xIndex], parts[yIndex], parts[zIndex]]);
+    if (redIndex !== undefined && greenIndex !== undefined && blueIndex !== undefined) {
+      colors.push([parts[redIndex], parts[greenIndex], parts[blueIndex]]);
+    } else {
+      colors.push([160, 160, 160]);
+    }
+  }
+
+  const faces = [];
+  const faceStart = headerEnd + 1 + vertexCount;
+  for (let i = 0; i < faceCount; i += 1) {
+    const parts = lines[faceStart + i].trim().split(/\s+/).map(Number);
+    if (parts[0] >= 3) faces.push([parts[1], parts[2], parts[3]]);
+  }
+
+  return { vertices, colors, faces };
+}
+
+function percentileSorted(sorted, p) {
+  const idx = (sorted.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+function axisRange(values, mode) {
+  if (mode === "points") {
+    const sorted = values.slice().sort((a, b) => a - b);
+    return [percentileSorted(sorted, 0.02), percentileSorted(sorted, 0.98)];
+  }
+  let mn = Infinity, mx = -Infinity;
+  for (let i = 0; i < values.length; i += 1) {
+    if (values[i] < mn) mn = values[i];
+    if (values[i] > mx) mx = values[i];
+  }
+  return [mn, mx];
+}
+
+function normalizeModel(model, options) {
+  options = options || {};
+  const xs = [], ys = [], zs = [];
+  model.vertices.forEach((v) => { xs.push(v[0]); ys.push(v[1]); zs.push(v[2]); });
+
+  const rx = axisRange(xs, options.mode);
+  const ry = axisRange(ys, options.mode);
+  const rz = axisRange(zs, options.mode);
+
+  const center = [(rx[0] + rx[1]) / 2, (ry[0] + ry[1]) / 2, (rz[0] + rz[1]) / 2];
+  const scale = Math.max(rx[1] - rx[0], ry[1] - ry[0], rz[1] - rz[0]) || 1;
+  const f = options.flipY ? -1 : 1;
+
+  model.vertices = model.vertices.map((v) => [
+    (v[0] - center[0]) / scale,
+    ((v[1] - center[1]) / scale) * f,
+    ((v[2] - center[2]) / scale) * f
+  ]);
+
+  if (options.mode === "points") {
+    const clip = 2.5;
+    const keptV = [], keptC = [];
+    for (let i = 0; i < model.vertices.length; i += 1) {
+      const v = model.vertices[i];
+      if (Math.abs(v[0]) <= clip && Math.abs(v[1]) <= clip && Math.abs(v[2]) <= clip) {
+        keptV.push(v);
+        keptC.push(model.colors[i]);
+      }
+    }
+    model.vertices = keptV;
+    model.colors = keptC;
+  }
+
+  return model;
+}
+
+function createViewer(root) {
+  const canvas = root.querySelector("canvas");
+  const status = root.querySelector(".viewer-status");
+  const ctx = canvas.getContext("2d");
+  const state = {
+    model: null,
+    mode: root.dataset.mode,
+    angleX: Number(root.dataset.angleX ?? -0.32),
+    angleY: Number(root.dataset.angleY ?? 0.72),
+    initialAngleX: Number(root.dataset.angleX ?? -0.32),
+    initialAngleY: Number(root.dataset.angleY ?? 0.72),
+    initialZoom: Number(root.dataset.initialZoom || 0.70),
+    zoom: Number(root.dataset.initialZoom || 0.70),
+    dragging: false,
+    frameRequested: false,
+    pointSize: Number(root.dataset.pointSize || 2.1),
+    lastX: 0,
+    lastY: 0
+  };
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    requestDraw();
+  }
+
+  function project(vertex) {
+    const [x, y, z] = vertex;
+    const cy = Math.cos(state.angleY);
+    const sy = Math.sin(state.angleY);
+    const cx = Math.cos(state.angleX);
+    const sx = Math.sin(state.angleX);
+
+    const x1 = x * cy - z * sy;
+    const z1 = x * sy + z * cy;
+    const y1 = y * cx - z1 * sx;
+    const z2 = y * sx + z1 * cx;
+    const rect = canvas.getBoundingClientRect();
+    const distance = 2.4;
+    const perspective = distance / (distance - z2);
+    const size = Math.min(rect.width, rect.height) * 1.35 * state.zoom;
+
+    return {
+      x: rect.width / 2 + x1 * perspective * size,
+      y: rect.height / 2 - y1 * perspective * size,
+      z: z2,
+      p: perspective
+    };
+  }
+
+  function drawBackground(width, height) {
+    ctx.clearRect(0, 0, width, height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#f7fafc");
+    gradient.addColorStop(1, "#e5ebf0");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  function drawPoints(points, colors) {
+    const order = points.map((point, index) => ({ point, index })).sort((a, b) => a.point.z - b.point.z);
+    order.forEach(({ point, index }) => {
+      const color = colors[index] || [242, 140, 38];
+      const shade = Math.max(0.45, Math.min(1, 0.74 + point.z * 0.45));
+      ctx.fillStyle = `rgb(${Math.round(color[0] * shade)}, ${Math.round(color[1] * shade)}, ${Math.round(color[2] * shade)})`;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, Math.max(0.75, state.pointSize * point.p), 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  function drawMesh(points, model) {
+    const faces = [];
+
+    for (let i = 0; i < model.faces.length; i += 1) {
+      const face = model.faces[i];
+      const a = points[face[0]];
+      const b = points[face[1]];
+      const c = points[face[2]];
+      if (!a || !b || !c) continue;
+      faces.push({ face, depth: (a.z + b.z + c.z) / 3 });
+    }
+
+    faces.sort((a, b) => a.depth - b.depth);
+    faces.forEach(({ face, depth }) => {
+      const a = points[face[0]];
+      const b = points[face[1]];
+      const c = points[face[2]];
+      const colorA = model.colors[face[0]] || [170, 176, 184];
+      const colorB = model.colors[face[1]] || colorA;
+      const colorC = model.colors[face[2]] || colorA;
+      const baseColor = [
+        (colorA[0] + colorB[0] + colorC[0]) / 3,
+        (colorA[1] + colorB[1] + colorC[1]) / 3,
+        (colorA[2] + colorB[2] + colorC[2]) / 3
+      ];
+      const shade = Math.max(0.55, Math.min(1.18, 0.86 + depth * 0.28));
+      const faceColor = baseColor.map((channel) => Math.max(0, Math.min(255, Math.round(channel * shade))));
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineTo(c.x, c.y);
+      ctx.closePath();
+      ctx.fillStyle = `rgb(${faceColor[0]}, ${faceColor[1]}, ${faceColor[2]})`;
+      ctx.strokeStyle = ctx.fillStyle;
+      ctx.lineWidth = 0.8;
+      ctx.lineJoin = "round";
+      ctx.fill();
+      ctx.stroke();
+    });
+  }
+
+  function draw() {
+    state.frameRequested = false;
+    const rect = canvas.getBoundingClientRect();
+    drawBackground(rect.width, rect.height);
+    if (!state.model) return;
+
+    const points = state.model.vertices.map(project);
+    if (state.mode === "mesh" && state.model.faces.length) {
+      drawMesh(points, state.model);
+    } else {
+      drawPoints(points, state.model.colors);
+    }
+  }
+
+  function requestDraw() {
+    if (state.frameRequested) return;
+    state.frameRequested = true;
+    window.requestAnimationFrame(draw);
+  }
+
+  canvas.addEventListener("pointerdown", (event) => {
+    state.dragging = true;
+    state.lastX = event.clientX;
+    state.lastY = event.clientY;
+    canvas.setPointerCapture(event.pointerId);
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    if (!state.dragging) return;
+    const dx = event.clientX - state.lastX;
+    const dy = event.clientY - state.lastY;
+    state.angleY += dx * 0.01;
+    state.angleX += dy * 0.01;
+    state.lastX = event.clientX;
+    state.lastY = event.clientY;
+    requestDraw();
+  });
+
+  canvas.addEventListener("pointerup", () => {
+    state.dragging = false;
+  });
+
+  canvas.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    state.zoom = Math.max(0.58, Math.min(2.5, state.zoom * (event.deltaY > 0 ? 0.92 : 1.08)));
+    requestDraw();
+  }, { passive: false });
+
+  const resetButton = root.querySelector("[data-reset]");
+  if (resetButton) {
+    resetButton.addEventListener("click", () => {
+      state.angleX = state.initialAngleX;
+      state.angleY = state.initialAngleY;
+      state.zoom = state.initialZoom;
+      requestDraw();
+    });
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  let loaded = false;
+  function load() {
+    if (loaded) return;
+    loaded = true;
+    fetch(root.dataset.src)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
+      .then((text) => {
+        state.model = normalizeModel(parseAsciiPly(text), {
+          flipY: root.dataset.flipY !== undefined,
+          mode: state.mode
+        });
+        status.textContent = state.mode === "mesh"
+          ? `${state.model.vertices.length.toLocaleString("de-DE")} Punkte · ${state.model.faces.length.toLocaleString("de-DE")} Dreiecke`
+          : `${state.model.vertices.length.toLocaleString("de-DE")} Punkte`;
+        requestDraw();
+      })
+      .catch(() => {
+        status.textContent = "Modell konnte nicht geladen werden";
+      });
+  }
+
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          load();
+          io.disconnect();
+        }
+      });
+    }, { rootMargin: "120px" });
+    io.observe(canvas);
+  } else {
+    load();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // WebGL viewer is initialized by assets/js/model-viewer.js below.
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const items = document.querySelectorAll(".lidar-accordion .lidar-item");
+  items.forEach((item) => {
+    item.addEventListener("toggle", () => {
+      if (item.open) {
+        items.forEach((other) => { if (other !== item) other.open = false; });
+        window.dispatchEvent(new Event("resize"));
+      }
+    });
+  });
+});
+</script>
+<script type="module" src="assets/js/model-viewer.js"></script>
+
+
+<script>
+
+function updateQualityWidget() {
+
+  const overlap = document.getElementById("overlap");
+
+  const texture = document.getElementById("texture");
+
+  const control = document.getElementById("control");
+
+  if (!overlap || !texture || !control) return;
+
+
+
+  const values = {
+
+    overlap: Number(overlap.value),
+
+    texture: Number(texture.value),
+
+    control: Number(control.value)
+
+  };
+
+  const score = Math.round(values.overlap * 0.38 + values.texture * 0.34 + values.control * 0.28);
+
+  const label = score >= 82 ? "sehr gute Rekonstruktion" : score >= 62 ? "solide Rekonstruktion" : score >= 42 ? "riskante Rekonstruktion" : "wahrscheinlich instabil";
+
+
+
+  document.getElementById("overlap-value").textContent = values.overlap;
+
+  document.getElementById("texture-value").textContent = values.texture;
+
+  document.getElementById("control-value").textContent = values.control;
+
+  document.getElementById("quality-score").textContent = score;
+
+  document.getElementById("quality-label").textContent = label;
+
+}
+
+
+
+function drawPointCloud(mode = "sparse") {
+
+  const canvas = document.getElementById("pointcloud-canvas");
+
+  if (!canvas) return;
+
+
+
+  const ctx = canvas.getContext("2d");
+
+  const w = canvas.width;
+
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+
+
+  ctx.fillStyle = "#f8fbfc";
+
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = "#d7e0e5";
+
+  ctx.lineWidth = 1;
+
+  for (let x = 60; x < w; x += 60) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(x, 0);
+
+    ctx.lineTo(x, h);
+
+    ctx.stroke();
+
+  }
+
+  for (let y = 60; y < h; y += 60) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(0, y);
+
+    ctx.lineTo(w, y);
+
+    ctx.stroke();
+
+  }
+
+
+
+  const count = mode === "dense" ? 1800 : 170;
+
+  for (let i = 0; i < count; i += 1) {
+
+    const t = i / count;
+
+    const band = Math.floor(t * 5);
+
+    const x = 115 + ((i * 47) % 670);
+
+    const roof = 135 + Math.abs(x - 450) * 0.18;
+
+    const base = 320 - Math.abs(x - 450) * 0.05;
+
+    const yBase = band < 2 ? roof + ((i * 31) % 70) : base - ((i * 23) % 120);
+
+    const jitter = mode === "dense" ? 7 : 18;
+
+    const y = yBase + Math.sin(i * 12.9898) * jitter;
+
+    const radius = mode === "dense" ? 1.3 : 3.1;
+
+
+
+    ctx.beginPath();
+
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+
+    ctx.fillStyle = band % 3 === 0 ? "#1f6feb" : band % 3 === 1 ? "#1a8f8a" : "#b45f06";
+
+    ctx.globalAlpha = mode === "dense" ? 0.72 : 0.95;
+
+    ctx.fill();
+
+  }
+
+  ctx.globalAlpha = 1;
+
+
+
+  ctx.fillStyle = "#172026";
+
+  ctx.font = "18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+
+  ctx.fillText(mode === "dense" ? "MVS: dichte Punktwolke" : "SfM: sparse Punktwolke", 28, 36);
+
+}
+
+
+
+function bindPointCloudDemo() {
+
+  const buttons = document.querySelectorAll("[data-cloud-mode]");
+
+  if (!buttons.length) return;
+
+  buttons.forEach((button) => {
+
+    button.addEventListener("click", () => {
+
+      buttons.forEach((other) => {
+
+        other.classList.toggle("btn-primary", other === button);
+
+        other.classList.toggle("btn-outline-primary", other !== button);
+
+      });
+
+      drawPointCloud(button.dataset.cloudMode);
+
+    });
+
+  });
+
+  drawPointCloud("sparse");
+
+}
+
+
+
+function bindMethodDecision() {
+
+  const answer = document.getElementById("method-answer");
+
+  if (!answer) return;
+
+
+
+  const copy = {
+
+    geometry: "Empfehlung: SfM/MVS. Die Pipeline liefert explizite Punkte, Kameras, Meshes und damit die beste Grundlage für Messung und Dokumentation.",
+
+    views: "Empfehlung: NeRF. Wenn neue Ansichten und fotorealistisches Rendering im Zentrum stehen, ist ein Radiance-Field-Ansatz naheliegend.",
+
+    realtime: "Empfehlung: 3D Gaussian Splatting. Für schnelle visuelle Navigation durch rekonstruierte Szenen ist GS häufig sehr attraktiv."
+
+  };
+
+
+
+  document.querySelectorAll("[data-method-choice]").forEach((button) => {
+
+    button.addEventListener("click", () => {
+
+      answer.textContent = copy[button.dataset.methodChoice];
+
+    });
+
+  });
+
+}
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  ["overlap", "texture", "control"].forEach((id) => {
+
+    const input = document.getElementById(id);
+
+    if (input) input.addEventListener("input", updateQualityWidget);
+
+  });
+
+  updateQualityWidget();
+
+  bindPointCloudDemo();
+
+  bindMethodDecision();
+
+});
+
+</script>
+
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+    tabsets.forEach(function(tabset) {
+      const tabby = new Tabby('#' + tabset.id);
+    });
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/martindre\.github\.io\/SfM_MVS\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'light-border',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+
+
+
+
+<script src="../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

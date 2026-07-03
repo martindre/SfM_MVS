@@ -10,13 +10,8 @@ format:
 lightbox: true
 ---
 
-::: {.site-section-nav}
-[Home](index.qmd)
-[Motivation & Use-Cases](einleitung.qmd)
-[Theorie](theorie.qmd)
-[Methoden-Vergleich](vergleich.qmd){.active}
-[Praktisches Beispiel](hands-on.qmd)
-[Quellen](quellen.qmd)
+::: site-section-nav
+[Home](index.qmd) [Motivation & Use-Cases](einleitung.qmd) [Theorie](theorie.qmd) [Methoden-Vergleich](vergleich.qmd){.active} [Praktisches Beispiel](hands-on.qmd) [Quellen](quellen.qmd)
 :::
 
 ```{=html}

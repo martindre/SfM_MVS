@@ -7,6 +7,7 @@ format:
     smooth-scroll: true
 ---
 
+```{=html}
 <style>
 .home-hero {
   position: relative;
@@ -197,35 +198,29 @@ format:
   }
 }
 </style>
+```
 
-::: {.site-section-nav}
-[Home](index.qmd){.active}
-[Motivation & Use-Cases](einleitung.qmd)
-[Theorie](theorie.qmd)
-[Methoden-Vergleich](vergleich.qmd)
-[Praktisches Beispiel](hands-on.qmd)
-[Quellen](quellen.qmd)
+::: site-section-nav
+[Home](index.qmd){.active} [Motivation & Use-Cases](einleitung.qmd) [Theorie](theorie.qmd) [Methoden-Vergleich](vergleich.qmd) [Praktisches Beispiel](hands-on.qmd) [Quellen](quellen.qmd)
 :::
 
-::: {.home-hero}
+::::: home-hero
 ```{=html}
 <div class="home-model" aria-hidden="true">
   <canvas data-hero-model></canvas>
 </div>
 ```
 
-::: {.home-copy}
-::: {.home-kicker}
+:::: home-copy
+::: home-kicker
 Visual Computing · SfM & MVS
 :::
 
 <h1>Von Fotos zu<br>3D-Modellen</h1>
 
-Ein moderenes und einfaches Verfahren um aus überlappenden Fotos präzise 3D-Modelle zu erzeugen.  
-
-
-:::
-:::
+Ein moderenes und einfaches Verfahren um aus überlappenden Fotos präzise 3D-Modelle zu erzeugen.
+::::
+:::::
 
 ```{=html}
 <script type="module" src="assets/js/hero-model.js"></script>
@@ -233,23 +228,23 @@ Ein moderenes und einfaches Verfahren um aus überlappenden Fotos präzise 3D-Mo
 
 ## Was ist SfM & MVS?
 
-::: {.home-intro-grid}
-::: {.home-card}
+::::: home-intro-grid
+::: home-card
 ## Structure-from-Motion
 
 SfM schätzt aus überlappenden Fotos, wo die Kameras standen und welche Bildpunkte dieselben realen 3D-Punkte zeigen. Daraus entstehen Kameraposen und eine sparse Punktwolke.
 :::
 
-::: {.home-card}
+::: home-card
 ## Multi-View Stereo
 
 MVS nutzt die bekannten Kameraposen, um Tiefeninformationen aus mehreren Bildern zu berechnen. So wird aus der sparse Punktwolke eine dichte Rekonstruktion mit Oberfläche und Textur.
 :::
-:::
+:::::
 
 ## Pipeline
 
-::: {.home-pipeline}
+::: home-pipeline
 ```{mermaid}
 flowchart LR
   A[Fotos] --> B[Features]
@@ -263,34 +258,34 @@ flowchart LR
 
 ## Struktur Website
 
-::: {.home-page-grid}
-::: {.home-page-card}
+:::::::: home-page-grid
+::: home-page-card
 [**Motivation & Use-Cases**](einleitung.qmd)
 
 Warum SfM/MVS relevant ist und in welchen Bereichen die Methode praktisch eingesetzt wird.
 :::
 
-::: {.home-page-card}
+::: home-page-card
 [**Theorie**](theorie.qmd)
 
 Theoretischer Hintergrund zu Feature Matching, Epipolargeometrie, Triangulation, Bundle Adjustment und MVS.
 :::
 
-::: {.home-page-card}
+::: home-page-card
 [**Methoden-Vergleich**](vergleich.qmd)
 
 Vergleich von SfM/MVS mit verwandten Verfahren wie NeRF und 3D Gaussian Splatting.
 :::
 
-::: {.home-page-card}
+::: home-page-card
 [**Praktisches Beispiel**](hands-on.qmd)
 
 Platz für Beispielmodelle, Tool-Vergleich und einen nachvollziehbaren Workflow mit COLMAP, openMVG/OpenMVS oder Open3D.
 :::
 
-::: {.home-page-card}
+::: home-page-card
 [**Quellen**](quellen.qmd)
 
 Gesammelte Literatur, Webquellen, Projektmaterialien und Asset-Hinweise der Website.
 :::
-:::
+::::::::
