@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Theoretischer Hintergrund – SfM &amp; MVS</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-html-e82cabd1c1379058ebcaccc337c10230.min.css" rel="stylesheet" append-hash="true" data-mode="light">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-845c23b38eaddc0f92fda52bfe77a8c8.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="../site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="../site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
+<style>html{ scroll-behavior: smooth; }</style>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../styles.css">
+</head>
+
+<body>
+
+
+<header id="title-block-header">
+<h1 class="title">Theoretischer Hintergrund</h1>
+<p class="subtitle">Von Fotos zu präzisen 3D-Modellen</p>
+
+</header>
+
+
+<div class="site-section-nav">
+<p><a href="../quarto/index.html">Home</a> <a href="../quarto/einleitung.html">Motivation &amp; Use-Cases</a> <a href="../quarto/theorie.html" class="active">Theorie</a> <a href="../quarto/vergleich.html">Methoden-Vergleich</a> <a href="../quarto/hands-on.html">Praktisches Beispiel</a> <a href="../quarto/quellen.html">Quellen</a></p>
+</div>
+<div class="page-overview">
+  <div class="poc">
+    <div class="poc-num">1</div>
+    <div class="poc-title">Pinhole-Kameramodell</div>
+    <div class="poc-desc">Projektion, Kalibrierung, intrinsische und extrinsische Parameter</div>
+  </div>
+  <div class="poc">
+    <div class="poc-num">2</div>
+    <div class="poc-title">Structure from Motion</div>
+    <div class="poc-desc">Features, Epipolargeometrie, Triangulation, Bundle Adjustment</div>
+  </div>
+  <div class="poc">
+    <div class="poc-num">3</div>
+    <div class="poc-title">Multi-View Stereo</div>
+    <div class="poc-desc">Dichte Rekonstruktion, View Selection, Fusion</div>
+  </div>
+  <div class="poc">
+    <div class="poc-num">4</div>
+    <div class="poc-title">COLMAP</div>
+    <div class="poc-desc">Vollständige Pipeline in der Praxis</div>
+  </div>
+</div>
+<h2 id="das-pinhole-kameramodell" class="anchored">1. Das Pinhole-Kameramodell</h2>
+<h3 id="die-grundidee" class="anchored">Die Grundidee</h3>
+<p>Eine Lochkamera (Pinhole Camera) ist das einfachste denkbare Kameramodell. Lichtstrahlen aus der Szene laufen durch einen einzigen Punkt — den <strong>optischen Mittelpunkt</strong> — und treffen auf die Bildebene dahinter.</p>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<p><a href="images/Pinhole_1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1" title="Pinhole-Kameramodell: optischer Mittelpunkt O_c, 3D-Punkt p_c und projizierter Bildpunkt p. Quelle: Szeliski (2022), Kap. 2.1.4, Figure 2.8."><img src="images/Pinhole_1.png" class="img-fluid quarto-figure quarto-figure-left" style="width:25.0%" alt="Pinhole-Kameramodell: optischer Mittelpunkt O_c, 3D-Punkt p_c und projizierter Bildpunkt p. Quelle: Szeliski (2022), Kap. 2.1.4, Figure 2.8."></a></p>
+</figure>
+</div>
+<figcaption><em>Pinhole-Kameramodell: optischer Mittelpunkt</em> <span class="math inline">\(O_c\)</span><em>, 3D-Punkt</em> <span class="math inline">\(p_c\)</span> <em>und projizierter Bildpunkt</em> <span class="math inline">\(p\)</span><em>. Quelle: Szeliski (2022), Kap. 2.1.4, Figure 2.8.</em></figcaption>
+</figure>
+</div>
+<p>Ein 3D-Punkt <span class="math inline">\(\mathbf{p}_c\)</span> in Kamerakoordinaten wird auf einen 2D-Bildpunkt <span class="math inline">\(\mathbf{p}\)</span> abgebildet. Alle Sichtstrahlen laufen durch den optischen Mittelpunkt <span class="math inline">\(O_c\)</span>.</p>
+<h3 id="die-projektion-inhomogene-und-homogene-koordinaten" class="anchored">Die Projektion: inhomogene und homogene Koordinaten</h3>
+<p>Der Schlüssel ist die perspektivische Projektion durch Division durch die Tiefe <span class="math inline">\(z\)</span>. In <strong>inhomogenen Koordinaten</strong>:</p>
+<p><span class="math display">\[\bar{x} = P_z(\mathbf{p}) = \left(\frac{x}{z}, \frac{y}{z}\right)\]</span></p>
+<p>Eine Division lässt sich nicht als Matrixmultiplikation schreiben. Deshalb führt man <strong>homogene Koordinaten</strong> ein: Ein 3D-Punkt wird um eine Koordinate <span class="math inline">\(w\)</span> erweitert, in der Standardrepräsentation <span class="math inline">\(w=1\)</span>:</p>
+<p><span class="math display">\[\mathbf{x}_h = (x, y, z, 1)^T\]</span></p>
+<p>Damit lässt sich die Projektion als reine Matrixmultiplikation schreiben:</p>
+<p><span class="math display">\[\tilde{x} = \begin{bmatrix} 1 &amp; 0 &amp; 0 &amp; 0 \\ 0 &amp; 1 &amp; 0 &amp; 0 \\ 0 &amp; 0 &amp; 1 &amp; 0 \end{bmatrix} \tilde{\mathbf{p}} = P \cdot \tilde{\mathbf{p}}\]</span></p>
+<p>Die Division durch <span class="math inline">\(z\)</span> erfolgt erst am Ende, bei der <strong>Dehomogenisierung</strong>: <span class="math inline">\(\bar{x} = (x_h/w_h, y_h/w_h)\)</span>.</p>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Fun Fact</strong><br><br> Neben der perspektivischen Projektion existieren weitere Modelle (Orthographie, Para-Perspektive). Für SfM und MVS ist ausschließlich die perspektivische Projektion relevant, da sie das Verhalten realer Kameras am besten modelliert.</p>
+</div>
+</div>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<p><a href="images/Pinhole_2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2" title="Szeliski, R. (2022). Computer Vision: Algorithms and Applications, 2nd Edition. Springer. Kapitel 2.1.4, Figure 2.7"><img src="images/Pinhole_2.png" class="img-fluid quarto-figure quarto-figure-left" style="width:20.0%" alt="Szeliski, R. (2022). Computer Vision: Algorithms and Applications, 2nd Edition. Springer. Kapitel 2.1.4, Figure 2.7"></a></p>
+</figure>
+</div>
+<figcaption>Szeliski, R. (2022). Computer Vision: Algorithms and Applications, 2nd Edition. Springer. Kapitel 2.1.4, Figure 2.7</figcaption>
+</figure>
+</div>
+<h3 id="intrinsische-parameter-die-kalibriermatrix-k" class="anchored">Intrinsische Parameter: die Kalibriermatrix K</h3>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<p><a href="images/Pinhole_3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3" title="Kalibriermatrix K: Hauptpunkt c_x, c_y , Brennweite f und Pixelkoordinaten x_s, y_s auf dem Sensor."><img src="images/Pinhole_3.png" class="img-fluid quarto-figure quarto-figure-left" style="width:28.0%" alt="Kalibriermatrix K: Hauptpunkt c_x, c_y , Brennweite f und Pixelkoordinaten x_s, y_s auf dem Sensor."></a></p>
+</figure>
+</div>
+<figcaption><em>Kalibriermatrix K: Hauptpunkt</em> <span class="math inline">\(c_x, c_y\)</span> <em>, Brennweite</em> <span class="math inline">\(f\)</span> <em>und Pixelkoordinaten</em> <span class="math inline">\(x_s, y_s\)</span> <em>auf dem Sensor.</em></figcaption>
+</figure>
+</div>
+<p>Die vollständige Kalibriermatrix:</p>
+<p><span class="math display">\[K = \begin{pmatrix} f_x &amp; s &amp; c_x \\ 0 &amp; f_y &amp; c_y \\ 0 &amp; 0 &amp; 1 \end{pmatrix}\]</span></p>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(f_x, f_y\)</span></td>
+<td>Brennweite in Pixeln (x- und y-Richtung)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(c_x, c_y\)</span></td>
+<td>Hauptpunkt: wo trifft die optische Achse den Sensor</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(s\)</span></td>
+<td>Skew (Scherung zwischen den Pixelachsen)</td>
+</tr>
+</tbody>
+</table>
+<p>In der Praxis vereinfacht sich <span class="math inline">\(K\)</span> stark: Moderne Sensoren haben quadratische Pixel (<span class="math inline">\(f_x = f_y = f\)</span>) und keinen Skew (<span class="math inline">\(s=0\)</span>):</p>
+<p><span class="math display">\[K = \begin{pmatrix} f &amp; 0 &amp; c_x \\ 0 &amp; f &amp; c_y \\ 0 &amp; 0 &amp; 1 \end{pmatrix}\]</span></p>
+<p>Diese vereinfachte Form wird in der Praxis und auch in SfM standardmäßig verwendet. <span class="math inline">\(K\)</span> beschreibt die <strong>Kamera selbst</strong> — unabhängig davon, wo sie steht.</p>
+<h3 id="extrinsische-parameter-r-und-t" class="anchored">Extrinsische Parameter: R und t</h3>
+<p><span class="math inline">\(K\)</span> beschreibt die Kamera, aber nicht wo sie <strong>steht</strong>. Dafür gibt es:</p>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Rotation R</strong><br><br> Eine 3×3-Rotationsmatrix, die die Orientierung der Kamera beschreibt (orthogonal, <span class="math inline">\(\det(R)=1\)</span>).</p>
+</div>
+<div class="workflow-card">
+<p><strong>Translation t</strong><br><br> Ein 3D-Vektor, der die Position der Kamera relativ zum Weltkoordinatensystem beschreibt.</p>
+</div>
+</div>
+<h3 id="die-vollständige-kameramatrix" class="anchored">Die vollständige Kameramatrix</h3>
+<p>Intrinsics und Extrinsics zusammen ergeben die <strong>Kameramatrix</strong>:</p>
+<p><span class="math display">\[P = K[R\mid \mathbf{t}]\]</span></p>
+<p>Damit lässt sich jeder Weltpunkt direkt in einen Bildpunkt umrechnen:</p>
+<p><span class="math display">\[\tilde{x} = P \cdot \tilde{\mathbf{p}} = K[R\mid\mathbf{t}]\cdot\tilde{\mathbf{p}}\]</span></p>
+<p>R und t sind dabei für die <strong>erste</strong> Kamera per Konvention <span class="math inline">\(R=I\)</span>, <span class="math inline">\(\mathbf{t}=\mathbf{0}\)</span>. Sie definiert den Ursprung der Welt. Genau diese Matrix <span class="math inline">\(P\)</span> ist es, die SfM für <strong>jedes</strong> Bild zu schätzen versucht.</p>
+<h2 id="structure-from-motion-sfm" class="anchored">2. Structure from Motion (SfM)</h2>
+<h3 id="das-grundprinzip" class="anchored">Das Grundprinzip</h3>
+<p>SfM löst das <strong>inverse Problem</strong> der Kameraprojektion: Gegeben mehrere Fotos, rekonstruiere gleichzeitig die Kamerapositionen und die 3D-Struktur der Szene.</p>
+<h3 id="feature-detection" class="anchored">Feature Detection</h3>
+<p>Um aus mehreren Bildern eine 3D-Struktur zu rekonstruieren, müssen wir wissen welche Punkte in verschiedenen Bildern denselben 3D-Punkt zeigen. Dafür brauchen wir Features. Charakteristische, wiedererkennbare Punkte im Bild.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><a href="images/SfM_1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4" title="Figure 7.3, Szeliski (2022), Kap. 7.1."><img src="images/SfM_1.png" class="img-fluid quarto-figure quarto-figure-center" style="width:35.0%" alt="Figure 7.3, Szeliski (2022), Kap. 7.1."></a></p>
+</figure>
+</div>
+<figcaption>Figure 7.3, Szeliski (2022), Kap. 7.1.</figcaption>
+</figure>
+</div>
+<h3 id="sift" class="anchored">SIFT</h3>
+<p>Bevor zwei Bilder verglichen werden können, müssen charakteristische <strong>Keypoints</strong> gefunden werden — Stellen, die unter Skalierung stabil bleiben. Der bekannteste Algorithmus ist <strong>SIFT</strong> (Lowe, 2004).</p>
+<p><strong>Detektor — Difference of Gaussian (DoG):</strong></p>
+<p><span class="math display">\[DoG\{I;\sigma_1,\sigma_2\} = G_{\sigma_1} * I - G_{\sigma_2} * I\]</span></p>
+<ul>
+<li><span class="math inline">\(I\)</span> = das Eingangsbild</li>
+<li><span class="math inline">\(G_{\sigma_1}, G_{\sigma_2}\)</span> = zwei unterschiedliche Glättungsfaktoren (Gaußfilter)</li>
+<li><span class="math inline">\(DoG\)</span> = die Differenz dieser beiden geglätteten Bilder</li>
+</ul>
+<p>Gesucht werden lokale Extrema in Raum <strong>und</strong> Skala — ein Pixel wird mit seinen 26 Nachbarn im 3×3×3-Würfel (aktuelle und benachbarte Skalenebenen) verglichen.</p>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<p><a href="images/SfM_2.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5" title="Figure 7.11, Szeliski (2022), Kap. 7.1.1."><img src="images/SfM_2.png" class="img-fluid quarto-figure quarto-figure-left" style="width:35.0%" alt="Figure 7.11, Szeliski (2022), Kap. 7.1.1."></a></p>
+</figure>
+</div>
+<figcaption><em>Figure 7.11, Szeliski (2022), Kap. 7.1.1.</em></figcaption>
+</figure>
+</div>
+<p><strong>Deskriptor — Gradientenhistogramm:</strong></p>
+<p>Jeder gefundene Keypoint wird durch ein Gradientenhistogramm eindeutig beschrieben:</p>
+<ul>
+<li>Fenster: 16×16 Pixel um den Keypoint</li>
+<li>Unterteilung: 4×4 Unterregionen</li>
+<li>Pro Unterregion: 8-Bin Gradientenhistogramm</li>
+<li>Ergebnis: <span class="math inline">\(4 \times 4 \times 8 = 128\)</span>-dimensionaler Vektor</li>
+</ul>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<p><a href="images/SfM_3.png" class="lightbox" data-gallery="quarto-lightbox-gallery-6" title="Figure 7.16, Szeliski (2022), Kap. 7.1.2."><img src="images/SfM_3.png" class="img-fluid quarto-figure quarto-figure-left" style="width:28.0%" alt="Figure 7.16, Szeliski (2022), Kap. 7.1.2."></a></p>
+</figure>
+</div>
+<figcaption><em>Figure 7.16, Szeliski (2022), Kap. 7.1.2.</em></figcaption>
+</figure>
+</div>
+<p>Links im Bild sind die rohen Gradienten dargestellt: Richtung und Stärke der Helligkeitsänderung an jedem Pixel innerhalb des 16×16 Fensters. Rechts ist das Ergebnis pro Unterregion zu sehen — die Sternform-Diagramme zeigen das 8-Bin-Histogramm, wobei die Länge in jede Richtung die Häufigkeit der jeweiligen Gradientenorientierung darstellt.</p>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Warum 8 Richtungen?</strong><br><br> Die Zahl von 8 Hauptrichtungen ist eine empirisch gewählte Designentscheidung von Lowe (2004): ein Kompromiss zwischen ausreichender Genauigkeit und Robustheit gegenüber Rauschen.</p>
+</div>
+<div class="workflow-card">
+<p><strong>Vereinfachte Abbildung</strong><br><br> Die Abbildung zeigt aus Darstellungsgründen eine vereinfachte Version mit 8×8 Pixel Fenster und 2×2 Unterregionen. Lowe’s tatsächliche Implementierung nutzt 16×16 Pixel mit 4×4 Unterregionen, wie oben beschrieben.</p>
+</div>
+</div>
+<h3 id="feature-matching-nearest-neighbor-distance-ratio" class="anchored">Feature Matching: Nearest Neighbor Distance Ratio</h3>
+<p>Um Keypoints zwischen zwei Bildern zuzuordnen, sucht man für jeden Deskriptor <span class="math inline">\(D_A\)</span> den nächsten Nachbarn <span class="math inline">\(D_B\)</span> (Distanz <span class="math inline">\(d_1\)</span>) und den zweitnächsten Nachbarn <span class="math inline">\(D_C\)</span> (Distanz <span class="math inline">\(d_2\)</span>) im 128-dimensionalen Feature-Raum:</p>
+<p><span class="math display">\[NNDR = \frac{d_1}{d_2} = \frac{\|D_A - D_B\|}{\|D_A - D_C\|}\]</span></p>
+<ul>
+<li>Ist NNDR <strong>klein</strong> → <span class="math inline">\(D_B\)</span> ist deutlich besser als <span class="math inline">\(D_C\)</span> → sicherer Match</li>
+<li>Ist NNDR <strong>nah bei 1</strong> → <span class="math inline">\(D_B\)</span> und <span class="math inline">\(D_C\)</span> sind ähnlich gut → unsicherer Match, eher verwerfen</li>
+</ul>
+<p>Diese Methode wurde von Lowe (2004) vorgeschlagen und passt sich automatisch an unterschiedliche Bildregionen an, ganz ohne festen globalen Schwellwert.</p>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<div class="quarto-figure quarto-figure-left">
+<figure>
+<p><a href="images/SfM_4.png" class="lightbox" data-gallery="quarto-lightbox-gallery-7" title="Figure 7.23, Szeliski (2022), Kap. 7.1.3."><img src="images/SfM_4.png" class="img-fluid quarto-figure quarto-figure-left" style="width:28.0%" alt="Figure 7.23, Szeliski (2022), Kap. 7.1.3."></a></p>
+</figure>
+</div>
+<figcaption><em>Figure 7.23, Szeliski (2022), Kap. 7.1.3.</em></figcaption>
+</figure>
+</div>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Bezug zu COLMAP</strong><br><br> COLMAP nutzt für das Matching standardmäßig genau diese NNDR-Methode (L2-Distanz mit Ratio-Test). Für die Nearest-Neighbor-Suche selbst setzt COLMAP approximative Verfahren ein (ursprünglich FLANN, in neueren Versionen Faiss), um bei vielen Bildern effizient zu bleiben.</p>
+</div>
+</div>
+<h3 id="ransac-ausreißer-entfernen" class="anchored">RANSAC: Ausreißer entfernen</h3>
+<p>Trotz NNDR-Filterung enthalten die Matches noch fehlerhafte Korrespondenzen. <strong>RANSAC</strong> (Random Sample Consensus) findet robust eine Lösung, die mit der größten Anzahl an Korrespondenzen konsistent ist.</p>
+<p><strong>Algorithmus:</strong></p>
+<ol type="1">
+<li>Wähle zufällig <span class="math inline">\(k\)</span> Korrespondenzen</li>
+<li>Schätze daraus die Modellparameter (z.B. die Essential Matrix <span class="math inline">\(E\)</span>)</li>
+<li>Zähle Inliers: <span class="math inline">\(\|r_i\| \leq \epsilon\)</span></li>
+<li>Wiederhole <span class="math inline">\(S\)</span> mal → behalte die beste Lösung</li>
+</ol>
+<p><span class="math inline">\(k\)</span> ergibt sich aus den Freiheitsgraden des jeweiligen Modells (4 für eine Homographie, 5 für die Essential Matrix, 7–8 für die Fundamentalmatrix) — es ist die minimale Anzahl an Punkten, die nötig ist, um das Modell eindeutig zu bestimmen.</p>
+<p><strong>Herleitung der nötigen Durchläufe S:</strong></p>
+<p>Sei <span class="math inline">\(p\)</span> die Wahrscheinlichkeit, dass eine einzelne zufällig gezogene Korrespondenz korrekt ist. Die Wahrscheinlichkeit, dass <em>alle</em> <span class="math inline">\(k\)</span> gezogenen Punkte gleichzeitig korrekt sind, ist <span class="math inline">\(p^k\)</span>. Damit ist die Wahrscheinlichkeit, dass ein einzelner Durchlauf fehlschlägt, <span class="math inline">\((1-p^k)\)</span>. Damit <em>alle</em> <span class="math inline">\(S\)</span> Durchläufe fehlschlagen:</p>
+<p><span class="math display">\[1-P = (1-p^k)^S\]</span></p>
+<p>Aufgelöst nach <span class="math inline">\(S\)</span>:</p>
+<p><span class="math display">\[S = \frac{\log(1-P)}{\log(1-p^k)}\]</span></p>
+<p>mit <span class="math inline">\(p, P \in [0,1]\)</span>: <span class="math inline">\(p\)</span> ist die angenommene Inlier-Wahrscheinlichkeit (anfangs pessimistisch geschätzt, z.B. <span class="math inline">\(p=0{,}5\)</span>), <span class="math inline">\(P\)</span> die gewünschte Erfolgswahrscheinlichkeit, dass nach <span class="math inline">\(S\)</span> Durchläufen mindestens einmal eine vollständig korrekte <span class="math inline">\(k\)</span>-Stichprobe gezogen wurde.</p>
+<h3 id="epipolargeometrie-und-die-essentialfundamentalmatrix" class="anchored">Epipolargeometrie und die Essential/Fundamentalmatrix</h3>
+<p>Zwei Kameras, die denselben 3D-Punkt <span class="math inline">\(\mathbf{p}\)</span> aus unterschiedlichen Positionen beobachten, spannen mit ihren Projektionszentren <span class="math inline">\(c_0, c_1\)</span> eine <strong>Epipolarebene</strong> auf.</p>
+<p><strong>Essential Matrix</strong> (kalibrierte Kameras, <span class="math inline">\(\hat{x} = K^{-1}x\)</span> normalisierte Koordinaten):</p>
+<p><span class="math display">\[E = [\mathbf{t}]_\times R, \qquad \hat{x}_1^T E \hat{x}_0 = 0\]</span></p>
+<p><strong>Fundamentalmatrix</strong> (unkalibrierte Kameras, rohe Pixelkoordinaten):</p>
+<p><span class="math display">\[F = K_1^{-T}EK_0^{-1}, \qquad x_1^T F x_0 = 0\]</span></p>
+<h4 id="herleitung" class="anchored">Herleitung</h4>
+<p>Kamera 0 sitzt im Ursprung. Der 3D-Punkt wird in Sicht von Kamera 1 transformiert:</p>
+<p><span class="math display">\[d_1\hat{x}_1 = R(d_0\hat{x}_0) + \mathbf{t}\]</span></p>
+<p>Bildet man auf beiden Seiten das Kreuzprodukt mit <span class="math inline">\(\mathbf{t}\)</span>, verschwindet der additive <span class="math inline">\(\mathbf{t}\)</span>-Term (da <span class="math inline">\(\mathbf{t}\times\mathbf{t}=0\)</span>):</p>
+<p><span class="math display">\[d_1[\mathbf{t}]_\times \hat{x}_1 = d_0[\mathbf{t}]_\times R\hat{x}_0\]</span></p>
+<p>Skalarprodukt beider Seiten mit <span class="math inline">\(\hat{x}_1\)</span>: Die linke Seite wird ein Spatprodukt mit zwei identischen Vektoren (<span class="math inline">\(\hat{x}_1\)</span> kommt doppelt vor) und ist damit immer 0:</p>
+<p><span class="math display">\[d_0\,\hat{x}_1^T([\mathbf{t}]_\times R)\hat{x}_0 = 0\]</span></p>
+<p>Da <span class="math inline">\(d_0\)</span> nur eine positive Zahl ist, kann man durch sie teilen — die unbekannte Tiefe <span class="math inline">\(d_0\)</span> verschwindet vollständig aus der Gleichung:</p>
+<p><span class="math display">\[\hat{x}_1^T E \hat{x}_0 = 0, \qquad E := [\mathbf{t}]_\times R\]</span></p>
+<p>Das ist das eigentliche Genie dieses Tricks: Die Bedingung hängt nur noch von den bekannten Bildmessungen und den gesuchten Kameraparametern ab — nicht von der unbekannten Tiefe.</p>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Geometrische Bedeutung</strong><br><br> Da die Tiefe <span class="math inline">\(d_0\)</span> in der Herleitung verschwindet, gilt die Bedingung für <em>jeden</em> möglichen Punkt auf dem Sichtstrahl von Kamera 0 gleichermaßen. Die Projektion des gesamten Sichtstrahls in Bild 1 ist deshalb keine einzelne Position, sondern eine ganze <strong>Epipolarlinie</strong>.</p>
+</div>
+</div>
+<h4 id="schätzung-von-r-t-aus-e" class="anchored">Schätzung von R, t aus E</h4>
+<p>Aus der geschätzten Essential Matrix lassen sich <span class="math inline">\(R\)</span> und <span class="math inline">\(\mathbf{t}\)</span> über eine Singulärwertzerlegung extrahieren:</p>
+<p><span class="math display">\[E = U\Sigma V^T\]</span></p>
+<p>Das liefert <strong>vier mögliche Kombinationen</strong> von <span class="math inline">\((R,\mathbf{t})\)</span> durch eine Vorzeichen-Ambiguität. Die korrekte Kombination wird über den <strong>Cheiralitätstest</strong> ausgewählt: Man trianguliert testweise die 3D-Punkte für jede Kombination und prüft, ob sie <strong>vor beiden Kameras</strong> liegen (positive Tiefe) — physikalisch kann eine Kamera nur Punkte sehen, die vor ihr liegen.</p>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Skalierungsambiguität</strong><br><br> Selbst nach Auswahl der korrekten Kombination bleibt nur die <strong>Richtung</strong> von <span class="math inline">\(\mathbf{t}\)</span> bestimmbar, nicht die absolute Distanz zwischen den Kameras. Die metrische Größe der Szene erfordert zusätzliche Information (Referenzdistanzen, GPS/Ground Control Points).</p>
+</div>
+<div class="workflow-card">
+<p><strong>Bezug zu COLMAP</strong><br><br> Da die Intrinsics meist bekannt sind (EXIF-Metadaten), arbeitet COLMAP standardmäßig mit der Essential Matrix und dem 5-Punkt-Algorithmus (<span class="math inline">\(k=5\)</span>) statt mit der Fundamentalmatrix.</p>
+</div>
+</div>
+<h3 id="triangulation-erste-3d-punkte" class="anchored">Triangulation: erste 3D-Punkte</h3>
+<p>Mit bekannten Kameramatrizen <span class="math inline">\(P_0, P_1\)</span> lässt sich aus zwei korrespondierenden 2D-Bildpunkten der zugehörige 3D-Punkt rekonstruieren.</p>
+<p>In der Praxis schneiden sich die beiden Sichtstrahlen wegen Messrauschen nicht exakt (im 3D-Raum können sich zwei Geraden — anders als in 2D — auch ganz allgemein windschief zueinander verhalten, ohne sich je zu treffen). Gesucht wird daher der Punkt <span class="math inline">\(\mathbf{p}\)</span>, der zu <strong>beiden</strong> Strahlen gleichzeitig den kleinsten Abstand hat.</p>
+<p>Der nächste Punkt auf einem Strahl <span class="math inline">\(j\)</span> zu einem angenommenen <span class="math inline">\(\mathbf{p}\)</span>:</p>
+<p><span class="math display">\[q_j = c_j + (\hat{v}_j\hat{v}_j^T)(\mathbf{p}-c_j)\]</span></p>
+<p>Das zu minimierende Residuum (Abstand Punkt zu Strahl):</p>
+<p><span class="math display">\[r_j^2 = \|(I-\hat{v}_j\hat{v}_j^T)(\mathbf{p}-c_j)\|^2\]</span></p>
+<p>Least-Squares-Lösung für <span class="math inline">\(\mathbf{p}\)</span> (direkt, geschlossene Form — kein Raten nötig):</p>
+<p><span class="math display">\[\mathbf{p} = \left[\sum_j(I-\hat{v}_j\hat{v}_j^T)\right]^{-1}\left[\sum_j(I-\hat{v}_j\hat{v}_j^T)c_j\right]\]</span></p>
+<h3 id="inkrementeller-aufbau" class="anchored">Inkrementeller Aufbau</h3>
+<p>Ausgehend von einem initialen Bildpaar wird die Rekonstruktion schrittweise um neue Bilder erweitert.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><a href="images/SfM_5.png" class="lightbox" data-gallery="quarto-lightbox-gallery-8" title="Figure 2, Schönberger &amp; Frahm (2016), CVPR, Abschnitt 2.2."><img src="images/SfM_5.png" class="img-fluid quarto-figure quarto-figure-center" style="width:35.0%" alt="Figure 2, Schönberger &amp; Frahm (2016), CVPR, Abschnitt 2.2."></a></p>
+</figure>
+</div>
+<figcaption><em>Figure 2, Schönberger &amp; Frahm (2016), CVPR, Abschnitt 2.2.</em></figcaption>
+</figure>
+</div>
+<p><strong>Kernschritte:</strong></p>
+<ol type="1">
+<li><strong>Initialisierung:</strong> Start mit einem sorgfältig gewählten Zwei-Bild-Paar (Epipolargeometrie + Triangulation, siehe oben)</li>
+<li><strong>Image Registration:</strong> Ein neues Bild wird über das <strong>Perspective-n-Point Problem (PnP)</strong> zur Rekonstruktion hinzugefügt — die Umkehrung der Triangulation: Statt aus bekannten Posen einen 3D-Punkt zu berechnen, nutzt man bereits bekannte 3D-Punkte und ihre 2D-Position im neuen Bild, um die unbekannte Pose dieser Kamera zu schätzen</li>
+<li><strong>Triangulation:</strong> Mit der neuen Kamera lassen sich weitere 3D-Punkte berechnen, die vorher nicht rekonstruierbar waren</li>
+<li><strong>Bundle Adjustment:</strong> Verfeinerung aller Kameras und Punkte gemeinsam (siehe unten)</li>
+<li><strong>Outlier Filtering:</strong> Entfernung schlechter Punkte</li>
+</ol>
+<p>Dieser Zyklus wird wiederholt, bis alle (oder möglichst viele) verfügbaren Bilder registriert sind.</p>
+<h3 id="bundle-adjustment" class="anchored">Bundle Adjustment</h3>
+<p>Image Registration und Triangulation laufen unabhängig voneinander ab, obwohl ihre Ergebnisse stark zusammenhängen: Fehler in der Kamerapose pflanzen sich in die triangulierten Punkte fort und umgekehrt. Ohne Korrektur driftet die Rekonstruktion zunehmend von der korrekten Lösung ab.</p>
+<p>Man nutzt dabei wieder die Projektion mit der Kameramatrix <span class="math inline">\(P\)</span> aus dem Pinhole-Modell: Man vergleicht, wo ein 3D-Punkt laut <span class="math inline">\(P\)</span> projiziert werden <em>sollte</em>, mit wo er tatsächlich <em>gemessen</em> wurde (Feature Matching). Diese Differenz heißt <strong>Reprojection Error</strong>.</p>
+<p><span class="math display">\[E = \sum_j \rho_j\left(\|P_c\cdot X_k - x_j\|_2^2\right)\]</span></p>
+<ul>
+<li><span class="math inline">\(P_c\)</span> = Kameramatrix der Kamera <span class="math inline">\(c\)</span> (<span class="math inline">\(K[R|t]\)</span>)</li>
+<li><span class="math inline">\(X_k\)</span> = 3D-Punkt <span class="math inline">\(k\)</span></li>
+<li><span class="math inline">\(x_j\)</span> = tatsächlich gemessene 2D-Position</li>
+<li><span class="math inline">\(\rho_j\)</span> = robuste Verlustfunktion (schwächt Ausreißer ab, ähnliches Prinzip wie bei RANSAC)</li>
+</ul>
+<p>Über alle Beobachtungen <span class="math inline">\(j\)</span> summiert wird die quadrierte Differenz zwischen Vorhersage und Messung minimiert — eine nicht-lineare Least-Squares-Optimierung über alle Kameras und Punkte gleichzeitig.</p>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Bezug zu COLMAP</strong><br><br> COLMAP löst dieses Optimierungsproblem nicht nach jedem einzelnen Schritt vollständig neu, da das bei großen Bildmengen zu rechenintensiv wäre. Stattdessen führt COLMAP nach jeder neuen Bildregistrierung ein <strong>lokales</strong> Bundle Adjustment durch (nur über die am stärksten verbundenen Kameras). Ein <strong>globales</strong> Bundle Adjustment über die gesamte Rekonstruktion wird nur periodisch ausgeführt. Gelöst wird das nicht-lineare Problem mit dem Levenberg-Marquardt-Algorithmus, konkret über die Ceres-Solver-Bibliothek.</p>
+</div>
+</div>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Ergebnis von SfM</strong><br><br> Sparse Point Cloud: spärliche 3D-Punkte an robust gematchten Feature-Stellen. Kalibrierte Kameraposen: <span class="math inline">\(P_c = K_c[R_c|\mathbf{t}_c]\)</span> für jedes registrierte Bild.</p>
+</div>
+</div>
+<h2 id="multi-view-stereo-mvs" class="anchored">3. Multi-View Stereo (MVS)</h2>
+<h3 id="von-sparse-zu-dense" class="anchored">Von Sparse zu Dense</h3>
+<p>SfM liefert eine <strong>spärliche</strong> Punktwolke - nur für Punkte, die robust über mehrere Bilder gematcht und trianguliert werden konnten. MVS nutzt die SfM-Ergebnisse (Kamerapositionen <span class="math inline">\(P_c\)</span>, spärliche Punkte) als Grundlage, um für <strong>jedes Pixel</strong> in jedem Bild eine Tiefe zu schätzen.</p>
+<p>COLMAP implementiert dafür den Ansatz von Schönberger, Zheng, Pollefeys &amp; Frahm (2016), der auf dem Optimierungsrahmen von Zheng et al.&nbsp;(2014) aufbaut. Die Kernidee: Für jeden Pixel im Referenzbild wird unter mehreren Nachbarbildern (Source Images) eine <strong>pixelweise Auswahl</strong> getroffen, basierend auf photometrischer Ähnlichkeit und geometrischen Kriterien.</p>
+<h3 id="photometrische-konsistenz-und-view-selection" class="anchored">Photometrische Konsistenz und View Selection</h3>
+<p>Für einen Pixel <span class="math inline">\(l\)</span> im Referenzbild mit Tiefe <span class="math inline">\(\theta_l\)</span> wird die Sichtbarkeit in einem Nachbarbild <span class="math inline">\(m\)</span> über eine binäre Indikatorvariable <span class="math inline">\(Z_l^m \in \{0,1\}\)</span> modelliert. Die Wahrscheinlichkeit, dass der Referenz-Patch im Quellbild <span class="math inline">\(m\)</span> sichtbar ist, hängt von der photometrischen Ähnlichkeit <span class="math inline">\(\rho_l^m\)</span> (Normalized Cross-Correlation) ab:</p>
+<p><span class="math display">\[P(X_l^m \mid Z_l^m, \theta_l) = \begin{cases} \dfrac{1}{N_A}\exp\!\left(-\dfrac{(1-\rho_l^m(\theta_l))^2}{2\sigma_\rho^2}\right) &amp; \text{falls } Z_l^m=1 \\[6pt] \dfrac{1}{N_U} &amp; \text{falls } Z_l^m=0 \end{cases}\]</span></p>
+<p>Ist der Patch verdeckt (<span class="math inline">\(Z_l^m=0\)</span>), wird eine Gleichverteilung angenommen - die Farbwerte sind dann statistisch unabhängig. Ist er sichtbar, ist eine hohe Ähnlichkeit <span class="math inline">\(\rho_l^m\)</span> wahrscheinlicher.</p>
+<h3 id="geometrische-priors" class="anchored">Geometrische Priors</h3>
+<p>Reine photometrische Auswahl bevorzugt Bildpaare mit kleiner Basislinie (ähnliche Blickwinkel) - diese liefern aber kaum Tiefeninformation. Schönberger et al.&nbsp;führen deshalb drei geometrische Priors ein, die zusätzlich in die Auswahl einfließen:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><a href="images/MVS_1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-9" title="Figure 2, Schönberger, Zheng, Pollefeys &amp; Frahm (2016), ECCV."><img src="images/MVS_1.png" class="img-fluid quarto-figure quarto-figure-center" style="width:60.0%" alt="Figure 2, Schönberger, Zheng, Pollefeys &amp; Frahm (2016), ECCV."></a></p>
+</figure>
+</div>
+<figcaption><em>Figure 2, Schönberger, Zheng, Pollefeys &amp; Frahm (2016), ECCV.</em></figcaption>
+</figure>
+</div>
+<p><strong>Triangulations-Prior.</strong> Der Winkel zwischen den Sichtstrahlen von Referenz- und Quellkamera zum 3D-Punkt <span class="math inline">\(p_l\)</span>:</p>
+<p><span class="math display">\[\alpha_l^m = \cos^{-1}\frac{(p_l - c^m)^T p_l}{\|p_l - c^m\| \, \|p_l\|}\]</span></p>
+<p>Ist dieser Winkel zu klein, liefert das Bildpaar kaum Tiefeninformation (der Punkt könnte entlang des Sichtstrahls verschoben werden, ohne die Farbähnlichkeit zu ändern). Die Likelihood-Funktion bestraft deshalb kleine Winkel unterhalb eines Schwellwerts <span class="math inline">\(\bar\alpha\)</span>:</p>
+<p><span class="math display">\[P(\alpha_l^m) = 1 - \left(\frac{\min(\bar\alpha, \alpha_l^m) - \bar\alpha}{\bar\alpha}\right)^2\]</span></p>
+<p><strong>Auflösungs-Prior.</strong> Das Verhältnis der Patch-Flächen zwischen Referenz- (<span class="math inline">\(b_l\)</span>) und Quellbild (<span class="math inline">\(b_l^m\)</span>):</p>
+<p><span class="math display">\[\beta_l^m = \frac{b_l}{b_l^m}\]</span></p>
+<p>Liegt <span class="math inline">\(\beta_l^m\)</span> nahe bei 1, haben beide Patches ähnliche Auflösung und Form. Die Likelihood-Funktion bevorzugt Werte nahe 1:</p>
+<p><span class="math display">\[P(\beta_l^m) = \min\left(\beta_l^m, (\beta_l^m)^{-1}\right)\]</span></p>
+<p><strong>Einfallswinkel-Prior.</strong> Der Winkel <span class="math inline">\(\kappa_l^m\)</span> zwischen der Blickrichtung der Quellkamera und der geschätzten Flächennormale <span class="math inline">\(n_l^m\)</span> am Punkt:</p>
+<p><span class="math display">\[\kappa_l^m = \cos^{-1}\frac{(p_l-c^m)^T n_l^m}{\|p_l-c^m\|\,\|n_l^m\|}\]</span></p>
+<p>Geometrisch kann eine Kamera eine Fläche nur sehen, wenn <span class="math inline">\(\kappa_l^m &lt; \tfrac{\pi}{2}\)</span> gilt. Die Likelihood-Funktion gewichtet entsprechend:</p>
+<p><span class="math display">\[P(\kappa_l^m) = \exp\left(-\frac{(\kappa_l^m)^2}{2\sigma_\kappa^2}\right)\]</span></p>
+<h3 id="kombinierte-view-selection-verteilung" class="anchored">Kombinierte View-Selection-Verteilung</h3>
+<p>Alle Priors werden zusammen mit dem photometrischen Term zu einer Sampling-Verteilung kombiniert, aus der pro Pixel die informativsten Quellbilder gezogen werden:</p>
+<p><span class="math display">\[P_l(m) = \frac{q(Z_l^m=1)\,q(\alpha_l^m)\,q(\beta_l^m)\,q(\kappa_l^m)}{\sum_{m=1}^{M} q(Z_l^m=1)\,q(\alpha_l^m)\,q(\beta_l^m)\,q(\kappa_l^m)}\]</span></p>
+<p>Anschaulich: Nicht verdeckte Bilder mit ausreichender Basislinie, ähnlicher Auflösung und frontalem Blickwinkel werden bei der Tiefenschätzung für diesen Pixel bevorzugt herangezogen.</p>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Optimierungsverfahren</strong><br><br> Die vollständige Inferenz von Tiefe, Normalen und Sichtbarkeit über alle Pixel löst Schönberger et al.&nbsp;mit einem Generalized-Expectation-Maximization-Algorithmus (GEM), kombiniert mit PatchMatch-Sampling für die Tiefen-/Normalenschätzung und einem Forward-Backward-Algorithmus für die Sichtbarkeitsvariablen. Diese Optimierungsdetails sind reine Implementierungsmechanik und für das Verständnis des Verfahrens nicht zwingend notwendig - entscheidend ist die Struktur der Likelihood-Funktion und der Priors oben.</p>
+</div>
+</div>
+<h3 id="tiefenkarte-pro-bild" class="anchored">Tiefenkarte pro Bild</h3>
+<p>Mit den View-Selection-Wahrscheinlichkeiten als Grundlage schätzt MVS für jedes einzelne Pixel im Referenzbild eine optimale Tiefe <span class="math inline">\(\theta_l\)</span> (und in der erweiterten Fassung von Schönberger et al.&nbsp;zusätzlich eine Flächennormale <span class="math inline">\(n_l\)</span>), indem die photometrische Inkonsistenz über die ausgewählten Quellbilder minimiert wird:</p>
+<p><span class="math display">\[(\hat\theta_l^{opt}, \hat n_l^{opt}) = \arg\min_{\theta_l^*, n_l^*} \frac{1}{|S|}\sum_{m \in S} \left(1-\rho_l^m(\theta_l^*, n_l^*)\right)\]</span></p>
+<p>wobei <span class="math inline">\(S\)</span> die Menge der für diesen Pixel ausgewählten Quellbilder ist. Das Ergebnis ist eine sogenannte <strong>Tiefenkarte</strong> pro Bild.</p>
+<h3 id="geometrische-konsistenz" class="anchored">Geometrische Konsistenz</h3>
+<p>Photometrische Ambiguitäten (z.B. bei wenig Textur) lassen sich oft durch den Abgleich mit anderen Tiefenkarten auflösen. Schönberger et al.&nbsp;definieren dafür den Vorwärts-Rückwärts-Reprojektionsfehler:</p>
+<p><span class="math display">\[\psi_l^m = \|x_l - H_l^m H_l x_l\|\]</span></p>
+<p>wobei <span class="math inline">\(H_l\)</span> die projektive Transformation vom Referenz- ins Quellbild ist und <span class="math inline">\(H_l^m\)</span> die Rücktransformation. Stimmen die Tiefen- und Normalenschätzungen zwischen den Bildern überein, ist <span class="math inline">\(\psi_l^m\)</span> klein.</p>
+<h3 id="zusammenführung-zu-dichten-punktwolken-fusion" class="anchored">Zusammenführung zu dichten Punktwolken (Fusion)</h3>
+<p>Die einzelnen Tiefenkarten enthalten Redundanzen und Inkonsistenzen. Im Fusion-Schritt werden konsistente Schätzungen aus mehreren Bildern zu einer einheitlichen, dichten 3D-Punktwolke zusammengeführt. Ein Pixel gilt als verlässlich (Inlier), wenn es sowohl photometrisch als auch geometrisch von mindestens <span class="math inline">\(s\)</span> Bildern unterstützt wird:</p>
+<p><span class="math display">\[S_l^{pho} = \{x_l^m \mid q(Z_l^m) &gt; \bar q_Z\}, \qquad S_l^{geo} = \{x_l^m \mid q(\alpha_l^m)\geq \bar q_\alpha,\ q(\beta_l^m)\geq \bar q_\beta,\ q(\kappa_l^m) &gt; \bar q_\kappa,\ \psi_l^m &lt; \psi_{max}\}\]</span></p>
+<p>Pixel mit ausreichender, konsistenter Unterstützung werden zu einem gemeinsamen 3D-Punkt fusioniert (Median-Position, gemittelte Normale); schwach unterstützte Pixel werden verworfen.</p>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>Ergebnis von MVS</strong><br><br> Dichte Punktwolke mit Tiefe und Normale pro Punkt: um Größenordnungen mehr Punkte als SfM.</p>
+</div>
+<div class="workflow-card">
+<p><strong>Hinweis zum Meshing</strong><br><br> Da jeder fusionierte Punkt bereits eine geschätzte Normale besitzt, lässt sich daraus direkt ein Mesh erzeugen, üblicherweise über Poisson Surface Reconstruction (Kazhdan &amp; Hoppe, 2013) — von Schönberger et al.&nbsp;selbst als optionaler letzter Schritt genannt.</p>
+</div>
+</div>
+<h2 id="colmap-in-der-praxis" class="anchored">4. COLMAP in der Praxis</h2>
+<h3 id="was-ist-colmap" class="anchored">Was ist COLMAP?</h3>
+<p>COLMAP ist eine quelloffene SfM+MVS-Pipeline, entwickelt von Johannes Schönberger u.a. an der ETH Zürich. Sie setzt die oben beschriebene Theorie konkret um.</p>
+<h3 id="die-colmap-pipeline" class="anchored">Die COLMAP-Pipeline</h3>
+<div class="workflow-grid">
+<div class="workflow-card">
+<p><strong>① Feature Extraction</strong><br><br> SIFT-Keypoints und 128-dim Deskriptoren für jedes Bild.</p>
+</div>
+<div class="workflow-card">
+<p><strong>② Feature Matching</strong><br><br> NNDR-Matching, geometrische Verifikation mit RANSAC. Pairing-Strategie wählbar: Exhaustive, Sequential oder Vocabulary Tree (löst das Skalierungsproblem bei vielen Bildern, da nicht jedes Bild gegen jedes andere getestet werden muss).</p>
+</div>
+<div class="workflow-card">
+<p><strong>③ Sparse Reconstruction</strong><br><br> Inkrementelles SfM: Kameraposen und sparse Punktwolke.</p>
+</div>
+<div class="workflow-card">
+<p><strong>④ Dense Reconstruction</strong><br><br> MVS-Tiefenkartenschätzung und Fusion zur dichten Punktwolke.</p>
+</div>
+</div>
+
+
+<script>
+
+function updateQualityWidget() {
+
+  const overlap = document.getElementById("overlap");
+
+  const texture = document.getElementById("texture");
+
+  const control = document.getElementById("control");
+
+  if (!overlap || !texture || !control) return;
+
+
+
+  const values = {
+
+    overlap: Number(overlap.value),
+
+    texture: Number(texture.value),
+
+    control: Number(control.value)
+
+  };
+
+  const score = Math.round(values.overlap * 0.38 + values.texture * 0.34 + values.control * 0.28);
+
+  const label = score >= 82 ? "sehr gute Rekonstruktion" : score >= 62 ? "solide Rekonstruktion" : score >= 42 ? "riskante Rekonstruktion" : "wahrscheinlich instabil";
+
+
+
+  document.getElementById("overlap-value").textContent = values.overlap;
+
+  document.getElementById("texture-value").textContent = values.texture;
+
+  document.getElementById("control-value").textContent = values.control;
+
+  document.getElementById("quality-score").textContent = score;
+
+  document.getElementById("quality-label").textContent = label;
+
+}
+
+
+
+function drawPointCloud(mode = "sparse") {
+
+  const canvas = document.getElementById("pointcloud-canvas");
+
+  if (!canvas) return;
+
+
+
+  const ctx = canvas.getContext("2d");
+
+  const w = canvas.width;
+
+  const h = canvas.height;
+
+  ctx.clearRect(0, 0, w, h);
+
+
+
+  ctx.fillStyle = "#f8fbfc";
+
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = "#d7e0e5";
+
+  ctx.lineWidth = 1;
+
+  for (let x = 60; x < w; x += 60) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(x, 0);
+
+    ctx.lineTo(x, h);
+
+    ctx.stroke();
+
+  }
+
+  for (let y = 60; y < h; y += 60) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(0, y);
+
+    ctx.lineTo(w, y);
+
+    ctx.stroke();
+
+  }
+
+
+
+  const count = mode === "dense" ? 1800 : 170;
+
+  for (let i = 0; i < count; i += 1) {
+
+    const t = i / count;
+
+    const band = Math.floor(t * 5);
+
+    const x = 115 + ((i * 47) % 670);
+
+    const roof = 135 + Math.abs(x - 450) * 0.18;
+
+    const base = 320 - Math.abs(x - 450) * 0.05;
+
+    const yBase = band < 2 ? roof + ((i * 31) % 70) : base - ((i * 23) % 120);
+
+    const jitter = mode === "dense" ? 7 : 18;
+
+    const y = yBase + Math.sin(i * 12.9898) * jitter;
+
+    const radius = mode === "dense" ? 1.3 : 3.1;
+
+
+
+    ctx.beginPath();
+
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+
+    ctx.fillStyle = band % 3 === 0 ? "#1f6feb" : band % 3 === 1 ? "#1a8f8a" : "#b45f06";
+
+    ctx.globalAlpha = mode === "dense" ? 0.72 : 0.95;
+
+    ctx.fill();
+
+  }
+
+  ctx.globalAlpha = 1;
+
+
+
+  ctx.fillStyle = "#172026";
+
+  ctx.font = "18px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+
+  ctx.fillText(mode === "dense" ? "MVS: dichte Punktwolke" : "SfM: sparse Punktwolke", 28, 36);
+
+}
+
+
+
+function bindPointCloudDemo() {
+
+  const buttons = document.querySelectorAll("[data-cloud-mode]");
+
+  if (!buttons.length) return;
+
+  buttons.forEach((button) => {
+
+    button.addEventListener("click", () => {
+
+      buttons.forEach((other) => {
+
+        other.classList.toggle("btn-primary", other === button);
+
+        other.classList.toggle("btn-outline-primary", other !== button);
+
+      });
+
+      drawPointCloud(button.dataset.cloudMode);
+
+    });
+
+  });
+
+  drawPointCloud("sparse");
+
+}
+
+
+
+function bindMethodDecision() {
+
+  const answer = document.getElementById("method-answer");
+
+  if (!answer) return;
+
+
+
+  const copy = {
+
+    geometry: "Empfehlung: SfM/MVS. Die Pipeline liefert explizite Punkte, Kameras, Meshes und damit die beste Grundlage für Messung und Dokumentation.",
+
+    views: "Empfehlung: NeRF. Wenn neue Ansichten und fotorealistisches Rendering im Zentrum stehen, ist ein Radiance-Field-Ansatz naheliegend.",
+
+    realtime: "Empfehlung: 3D Gaussian Splatting. Für schnelle visuelle Navigation durch rekonstruierte Szenen ist GS häufig sehr attraktiv."
+
+  };
+
+
+
+  document.querySelectorAll("[data-method-choice]").forEach((button) => {
+
+    button.addEventListener("click", () => {
+
+      answer.textContent = copy[button.dataset.methodChoice];
+
+    });
+
+  });
+
+}
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  ["overlap", "texture", "control"].forEach((id) => {
+
+    const input = document.getElementById(id);
+
+    if (input) input.addEventListener("input", updateQualityWidget);
+
+  });
+
+  updateQualityWidget();
+
+  bindPointCloudDemo();
+
+  bindMethodDecision();
+
+});
+
+</script>
+
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+    tabsets.forEach(function(tabset) {
+      const tabby = new Tabby('#' + tabset.id);
+    });
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+            // target, if specified
+            link.setAttribute("target", "_blank");
+            if (link.getAttribute("rel") === null) {
+              link.setAttribute("rel", "noopener");
+            }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'light-border',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
+
+
+
+
+<script src="../site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
