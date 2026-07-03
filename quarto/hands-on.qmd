@@ -1,0 +1,1052 @@
+---
+title: "Praktisches Beispiel"
+subtitle: "COLMAP-Ausgaben als Punktwolke und Mesh"
+format:
+  html:
+    toc: false
+    smooth-scroll: true
+resources:
+  - models/**
+---
+
+::: {.site-section-nav}
+[Home](index.qmd)
+[Motivation & Use-Cases](einleitung.qmd)
+[Theorie](theorie.qmd)
+[Methoden-Vergleich](vergleich.qmd)
+[Praktisches Beispiel](hands-on.qmd){.active}
+[Quellen](quellen.qmd)
+:::
+
+<style>
+.practical-hero {
+  margin: 1rem 0 2rem;
+  max-width: 82ch;
+}
+
+.practical-hero p,
+.workflow-note p,
+.model-card p,
+.code-card p {
+  line-height: 1.65;
+}
+
+.model-stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0 2.5rem;
+}
+
+.scan-pair-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 0.9rem 0 2rem;
+}
+
+.lidar-scan-title {
+  margin-top: 1.6rem;
+  margin-bottom: 0.35rem;
+  font-size: 1.15rem;
+}
+
+.model-card,
+.workflow-note,
+.code-card {
+  border: 1px solid var(--sfm-line, #d7e0e5);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(23, 32, 38, 0.06);
+}
+
+.model-card {
+  overflow: hidden;
+}
+
+.model-card-header {
+  padding: 1rem 1rem 0.75rem;
+}
+
+.model-card-header h2,
+.code-card h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+}
+
+.model-card-header p {
+  margin-bottom: 0;
+}
+
+.model-viewer {
+  position: relative;
+  min-height: 390px;
+  background:
+    linear-gradient(180deg, rgba(246, 248, 249, 0.96), rgba(230, 236, 241, 0.96));
+  border-top: 1px solid var(--sfm-line, #d7e0e5);
+}
+
+.model-viewer canvas {
+  width: 100%;
+  height: 390px;
+  display: block;
+  cursor: grab;
+}
+
+.model-viewer canvas:active {
+  cursor: grabbing;
+}
+
+.viewer-status {
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--sfm-muted, #5a6670);
+  font-size: 0.82rem;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(23, 32, 38, 0.08);
+}
+
+.viewer-controls {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.viewer-controls button,
+.viewer-controls a {
+  border: 1px solid rgba(23, 32, 38, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--sfm-ink, #172026);
+  padding: 0.42rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.viewer-controls button:hover,
+.viewer-controls a:hover {
+  background: var(--sfm-blue, #1f6feb);
+  color: #fff;
+}
+
+.workflow-note,
+.code-card {
+  padding: 1rem 1.1rem;
+  margin: 1.25rem 0;
+}
+
+.workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0 2rem;
+}
+
+.workflow-step {
+  border: 1px solid var(--sfm-line, #d7e0e5);
+  border-radius: 8px;
+  padding: 0.9rem;
+  background: #f8fafb;
+}
+
+.workflow-step strong {
+  display: block;
+  color: var(--sfm-blue, #1f6feb);
+  margin-bottom: 0.35rem;
+}
+
+.code-links {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 920px) {
+  .scan-pair-grid,
+  .workflow-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* COLMAP vs LiDAR comparison */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin: 1rem 0 2.5rem;
+}
+
+.compare-col {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.compare-label {
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.compare-colmap { background: rgba(31, 111, 235, 0.12); color: #1f6feb; }
+.compare-lidar  { background: rgba(196, 73, 45, 0.12);  color: #c4492d; }
+
+/* LiDAR accordion (wie Motivation & Use-Cases) */
+.lidar-accordion {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 2.5rem;
+}
+
+.lidar-item {
+  border: 1px solid var(--sfm-line, #d7e0e5);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(23, 32, 38, 0.06);
+}
+
+.lidar-item summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1rem 1.15rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(127, 127, 127, 0.035);
+  transition: background 0.18s ease;
+}
+
+.lidar-item summary::-webkit-details-marker { display: none; }
+
+.lidar-item summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(31, 111, 235, 0.12);
+  color: #1f6feb;
+  font-weight: 800;
+  font-size: 1.05rem;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.lidar-item[open] summary { background: rgba(31, 111, 235, 0.08); }
+.lidar-item[open] summary::after { content: "\2013"; background: #1f6feb; color: #fff; }
+
+.lidar-title { font-weight: 750; font-size: 1.02rem; }
+.lidar-meta {
+  margin-left: auto;
+  margin-right: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--sfm-muted, #5a6670);
+  white-space: nowrap;
+}
+
+.lidar-body { padding: 1rem 1.15rem 1.25rem; }
+.lidar-body .model-card { box-shadow: none; }
+.compare-section-intro { max-width: 82ch; line-height: 1.65; }
+
+.capture-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 1.7rem;
+}
+
+.capture-grid figure {
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--sfm-line, #d7e0e5);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(23, 32, 38, 0.06);
+}
+
+.capture-grid img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.capture-grid figcaption {
+  padding: 0.55rem 0.7rem;
+  color: var(--sfm-muted, #5a6670);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+@media (max-width: 920px) {
+  .compare-grid { grid-template-columns: 1fr; }
+  .capture-grid { grid-template-columns: 1fr; }
+}
+
+</style>
+
+::: {.practical-hero}
+# Praktisches Beispiel: Vom Rekonstruktionsergebnis zum 3D-Modell
+:::
+
+## COLMAP vs. LiDAR: dieselbe Statue, zwei Verfahren
+
+::: {.compare-section-intro}
+Dieselbe rund **40 cm große Statue**, einmal photogrammetrisch mit **COLMAP** rekonstruiert und einmal per **LiDAR** erfasst. Der LiDAR-Scan dient hier als **Negativbeispiel**: Bei kleinen, detailreichen Objekten stoßen viele LiDAR-Sensoren an ihre Auflösungsgrenze, sodass Löcher, Rauschen und verschmierte Details entstehen, während die bildbasierte Rekonstruktion feinere Strukturen auflöst.
+
+**Anmerkung:** Für das tatsächliche Erstellen des 3D-Modells mit SfM/MVS wurden mehr als diese drei Bilder verwendet. Sie dienen lediglich dazu, das eingescannte Objekt zu zeigen.
+:::
+
+```{=html}
+<div class="capture-grid" aria-label="Eingabefotos fuer die COLMAP-Rekonstruktion">
+  <figure>
+    <img src="images/Statue_Nima__1.png" alt="Eingabefoto der Statue fuer die SfM-MVS-Rekonstruktion, Ansicht 1">
+    <figcaption>Ausgangsfoto 1</figcaption>
+  </figure>
+  <figure>
+    <img src="images/Statue_Nima__2.png" alt="Eingabefoto der Statue fuer die SfM-MVS-Rekonstruktion, Ansicht 2">
+    <figcaption>Ausgangsfoto 2</figcaption>
+  </figure>
+  <figure>
+    <img src="images/Nima_Staue__3.png" alt="Eingabefoto der Statue fuer die SfM-MVS-Rekonstruktion, Ansicht 3">
+    <figcaption>Ausgangsfoto 3</figcaption>
+  </figure>
+</div>
+
+<div class="compare-grid">
+  <div class="compare-col">
+    <div class="compare-label compare-colmap">COLMAP / Photogrammetrie</div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>AC-Statue: COLMAP-Sparse-Punktwolke</h2>
+      <p>Die spärliche Punktwolke aus der SfM-Phase von COLMAP: die rekonstruierten Feature-Punkte vor der dichten Rekonstruktion und Vermaschung (27.239 Punkte).</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-flip-y data-src="models/comparison/AC_statue_sparse_web.ply" data-mode="points" data-point-size="2.0" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der COLMAP-Sparse-Punktwolke der AC-Statue"></canvas>
+      <div class="viewer-status">Lade Punktwolke...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/comparison/AC_statue_sparse_full.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>AC-Statue (COLMAP)</h2>
+      <p>Photogrammetrische Rekonstruktion der ≈40 cm großen Statue mit COLMAP. Web-Version (≈21.000 Dreiecke).</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-flip-y data-src="models/comparison/AC_statue_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer der COLMAP-Statue"></canvas>
+      <div class="viewer-status">Lade COLMAP-Statue...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/comparison/AC_statue_web.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+  </div>
+  <div class="compare-col">
+    <div class="compare-label compare-lidar">LiDAR (Negativbeispiel)</div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>AC-Statue: LiDAR-Punktwolke</h2>
+      <p>Dieselbe Statue als LiDAR-Punktwolke. Sichtbar werden geringere Punktdichte und Rauschen.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/comparison/nima_points_web.ply" data-mode="points" data-point-size="2.0" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke"></canvas>
+      <div class="viewer-status">Lade LiDAR-Punktwolke...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/comparison/nima_points_full.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>AC-Statue: LiDAR-Mesh</h2>
+      <p>Das aus dem LiDAR-Scan abgeleitete Mesh – mit Löchern und verschmierten Details als Negativbeispiel.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/comparison/nima_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/comparison/nima_mesh_full.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+```
+
+## Beispiele aus dem Internet (COLMAP)
+
+Punktwolke und Mesh als typische Ergebnisformen einer SfM/MVS- bzw. COLMAP-Pipeline – vom kleinen Testobjekt bis zum kompletten Gebäude.
+
+```{=html}
+<div class="model-stack">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Bunny: Punktwolke</h2>
+      <p>Die Punktwolke steht für ein typisches Zwischenergebnis: viele einzelne 3D-Punkte, aber noch keine geschlossene Oberfläche.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/examples/bunny_points.ply" data-mode="points" data-point-size="2.1" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der Bunny-Punktwolke"></canvas>
+      <div class="viewer-status">Lade Punktwolke...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/examples/bunny_points.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Bunny: Mesh</h2>
+      <p>Das Mesh verbindet die rekonstruierten Punkte zu Dreiecken – eine explizite Oberfläche, die exportiert und weiterverarbeitet werden kann.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/examples/bunny_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des Bunny-Meshes"></canvas>
+      <div class="viewer-status">Lade Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/examples/bunny_mesh.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Wohnzimmer: Punktwolke</h2>
+      <p>Eine größere rekonstruierte Innenraum-Szene. Sie zeigt, dass nicht nur einzelne Objekte, sondern auch ganze Umgebungen als Punktwolke darstellbar sind.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/examples/wohnzimmer_points.ply" data-mode="points" data-point-size="1.15" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der Wohnzimmer-Punktwolke"></canvas>
+      <div class="viewer-status">Lade Wohnzimmer...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/examples/wohnzimmer_points.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>South Building: Sparse-Punktwolke</h2>
+      <p>Die spärliche Punktwolke aus der SfM-Phase von COLMAP: die rekonstruierten Feature-Punkte vor der dichten Rekonstruktion und Vermaschung (61.123 Punkte).</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-flip-y data-src="models/colmap/southBuilding_sparse_web.ply" data-mode="points" data-point-size="1.6" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der South-Building-Sparse-Punktwolke"></canvas>
+      <div class="viewer-status">Lade Punktwolke...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/colmap/southBuilding_sparse.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>South Building: COLMAP-Mesh</h2>
+      <p>Eine COLMAP-Rekonstruktion eines kompletten Gebäudes. Gezeigt als reduzierte Web-Version (≈11.000 Dreiecke); das Originalmesh hat über 29 Mio. Dreiecke.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-flip-y data-src="models/colmap/southBuilding_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des South-Building-Meshes"></canvas>
+      <div class="viewer-status">Lade South Building...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/colmap/southBuilding_web.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+## COLMAP-Grenzfall: texturlose & reflektierende Oberflächen
+
+::: {.compare-section-intro}
+Photogrammetrie braucht wiedererkennbare Bildmerkmale, um Punkte über mehrere Aufnahmen hinweg zuzuordnen. Bei **texturlosen, spiegelnden oder transparenten Oberflächen** fehlen diese Merkmale oder wandern scheinbar mit dem Blickwinkel. COLMAP findet dann zu wenige stabile Korrespondenzen – das Ergebnis wird lückenhaft, verrauscht und verzerrt. Das folgende Mesh ist ein solches **Negativbeispiel**.
+:::
+
+```{=html}
+<div class="model-stack">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>COLMAP-Fehlschlag: texturlos & reflektierend</h2>
+      <p>Texturlose, spiegelnde oder transparente Flächen liefern kaum stabile Bildmerkmale. Dadurch entstehen Löcher, Rauschen und verzerrte Geometrie. Web-Version (≈16.000 Dreiecke); das vollständige Mesh hat rund 1,9 Mio. Dreiecke.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-flip-y data-src="models/comparison/statue_fail_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des COLMAP-Fehlschlags"></canvas>
+      <div class="viewer-status">Lade Modell...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/comparison/statue_fail_web.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+## LiDAR-Scans
+
+```{=html}
+<div class="lidar-accordion">
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 1: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 1: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 1. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_1_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 1"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Points/statue_1_points.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 1: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_1_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 1"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Mesh/statue_1_mesh.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 2: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 2: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 2. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_2_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 2"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Points/statue_2_points.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 2: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_2_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 2"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Mesh/statue_2_mesh.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 3: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 3: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 3. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_3_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 3"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Points/statue_3_points.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 3: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_3_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 3"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Mesh/statue_3_mesh.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 4: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 4: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 4. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_4_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 4"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Points/statue_4_points.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 4: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_4_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 4"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Mesh/statue_4_mesh.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+<details class="lidar-item">
+  <summary>
+    <span class="lidar-title">Scan 5: Statue</span>
+    <span class="lidar-meta">LiDAR · Punktwolke + Mesh</span>
+  </summary>
+  <div class="lidar-body">
+<div class="scan-pair-grid">
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 5: Punktwolke</h2>
+      <p>LiDAR-Punktwolke des 5. Statuen-Scans.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_5_points_web.ply" data-mode="points" data-point-size="1.25" data-color="#1f6feb">
+      <canvas aria-label="Interaktiver Viewer der LiDAR-Punktwolke Scan 5"></canvas>
+      <div class="viewer-status">Lade LiDAR-Points...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Points/statue_5_points.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+  <div class="model-card">
+    <div class="model-card-header">
+      <h2>Scan 5: Mesh</h2>
+      <p>Oberflächenmodell aus demselben LiDAR-Scan.</p>
+    </div>
+    <div class="model-viewer" data-model-viewer data-src="models/LidarScans/Web/statue_5_mesh_web.ply" data-mode="mesh" data-color="#9aa3ad">
+      <canvas aria-label="Interaktiver Viewer des LiDAR-Meshes Scan 5"></canvas>
+      <div class="viewer-status">Lade LiDAR-Mesh...</div>
+      <div class="viewer-controls">
+        <button type="button" data-reset>Reset</button>
+        <a href="models/LidarScans/Mesh/statue_5_mesh.ply" download>PLY</a>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</details>
+</div>
+```
+
+```{=html}
+<script>
+function parseAsciiPly(text) {
+  const lines = text.trim().split(/\r?\n/);
+  let vertexCount = 0;
+  let faceCount = 0;
+  let headerEnd = -1;
+  let activeElement = "";
+  const vertexProperties = [];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (line.startsWith("element vertex")) {
+      vertexCount = Number(line.split(/\s+/)[2]);
+      activeElement = "vertex";
+    } else if (line.startsWith("element face")) {
+      faceCount = Number(line.split(/\s+/)[2]);
+      activeElement = "face";
+    } else if (activeElement === "vertex" && line.startsWith("property") && !line.includes(" list ")) {
+      const parts = line.split(/\s+/);
+      vertexProperties.push(parts[parts.length - 1]);
+    }
+    if (line === "end_header") {
+      headerEnd = i;
+      break;
+    }
+  }
+
+  const vertices = [];
+  const colors = [];
+  const propertyIndex = Object.fromEntries(vertexProperties.map((name, index) => [name, index]));
+  const xIndex = propertyIndex.x ?? 0;
+  const yIndex = propertyIndex.y ?? 1;
+  const zIndex = propertyIndex.z ?? 2;
+  const redIndex = propertyIndex.red ?? propertyIndex.r ?? propertyIndex.diffuse_red;
+  const greenIndex = propertyIndex.green ?? propertyIndex.g ?? propertyIndex.diffuse_green;
+  const blueIndex = propertyIndex.blue ?? propertyIndex.b ?? propertyIndex.diffuse_blue;
+
+  for (let i = 0; i < vertexCount; i += 1) {
+    const parts = lines[headerEnd + 1 + i].trim().split(/\s+/).map(Number);
+    vertices.push([parts[xIndex], parts[yIndex], parts[zIndex]]);
+    if (redIndex !== undefined && greenIndex !== undefined && blueIndex !== undefined) {
+      colors.push([parts[redIndex], parts[greenIndex], parts[blueIndex]]);
+    } else {
+      colors.push([160, 160, 160]);
+    }
+  }
+
+  const faces = [];
+  const faceStart = headerEnd + 1 + vertexCount;
+  for (let i = 0; i < faceCount; i += 1) {
+    const parts = lines[faceStart + i].trim().split(/\s+/).map(Number);
+    if (parts[0] >= 3) faces.push([parts[1], parts[2], parts[3]]);
+  }
+
+  return { vertices, colors, faces };
+}
+
+function percentileSorted(sorted, p) {
+  const idx = (sorted.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+}
+
+function axisRange(values, mode) {
+  if (mode === "points") {
+    const sorted = values.slice().sort((a, b) => a - b);
+    return [percentileSorted(sorted, 0.02), percentileSorted(sorted, 0.98)];
+  }
+  let mn = Infinity, mx = -Infinity;
+  for (let i = 0; i < values.length; i += 1) {
+    if (values[i] < mn) mn = values[i];
+    if (values[i] > mx) mx = values[i];
+  }
+  return [mn, mx];
+}
+
+function normalizeModel(model, options) {
+  options = options || {};
+  const xs = [], ys = [], zs = [];
+  model.vertices.forEach((v) => { xs.push(v[0]); ys.push(v[1]); zs.push(v[2]); });
+
+  const rx = axisRange(xs, options.mode);
+  const ry = axisRange(ys, options.mode);
+  const rz = axisRange(zs, options.mode);
+
+  const center = [(rx[0] + rx[1]) / 2, (ry[0] + ry[1]) / 2, (rz[0] + rz[1]) / 2];
+  const scale = Math.max(rx[1] - rx[0], ry[1] - ry[0], rz[1] - rz[0]) || 1;
+  const f = options.flipY ? -1 : 1;
+
+  model.vertices = model.vertices.map((v) => [
+    (v[0] - center[0]) / scale,
+    ((v[1] - center[1]) / scale) * f,
+    ((v[2] - center[2]) / scale) * f
+  ]);
+
+  if (options.mode === "points") {
+    const clip = 2.5;
+    const keptV = [], keptC = [];
+    for (let i = 0; i < model.vertices.length; i += 1) {
+      const v = model.vertices[i];
+      if (Math.abs(v[0]) <= clip && Math.abs(v[1]) <= clip && Math.abs(v[2]) <= clip) {
+        keptV.push(v);
+        keptC.push(model.colors[i]);
+      }
+    }
+    model.vertices = keptV;
+    model.colors = keptC;
+  }
+
+  return model;
+}
+
+function createViewer(root) {
+  const canvas = root.querySelector("canvas");
+  const status = root.querySelector(".viewer-status");
+  const ctx = canvas.getContext("2d");
+  const state = {
+    model: null,
+    mode: root.dataset.mode,
+    angleX: Number(root.dataset.angleX ?? -0.32),
+    angleY: Number(root.dataset.angleY ?? 0.72),
+    initialAngleX: Number(root.dataset.angleX ?? -0.32),
+    initialAngleY: Number(root.dataset.angleY ?? 0.72),
+    initialZoom: Number(root.dataset.initialZoom || 0.70),
+    zoom: Number(root.dataset.initialZoom || 0.70),
+    dragging: false,
+    frameRequested: false,
+    pointSize: Number(root.dataset.pointSize || 2.1),
+    lastX: 0,
+    lastY: 0
+  };
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    requestDraw();
+  }
+
+  function project(vertex) {
+    const [x, y, z] = vertex;
+    const cy = Math.cos(state.angleY);
+    const sy = Math.sin(state.angleY);
+    const cx = Math.cos(state.angleX);
+    const sx = Math.sin(state.angleX);
+
+    const x1 = x * cy - z * sy;
+    const z1 = x * sy + z * cy;
+    const y1 = y * cx - z1 * sx;
+    const z2 = y * sx + z1 * cx;
+    const rect = canvas.getBoundingClientRect();
+    const distance = 2.4;
+    const perspective = distance / (distance - z2);
+    const size = Math.min(rect.width, rect.height) * 1.35 * state.zoom;
+
+    return {
+      x: rect.width / 2 + x1 * perspective * size,
+      y: rect.height / 2 - y1 * perspective * size,
+      z: z2,
+      p: perspective
+    };
+  }
+
+  function drawBackground(width, height) {
+    ctx.clearRect(0, 0, width, height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, "#f7fafc");
+    gradient.addColorStop(1, "#e5ebf0");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  function drawPoints(points, colors) {
+    const order = points.map((point, index) => ({ point, index })).sort((a, b) => a.point.z - b.point.z);
+    order.forEach(({ point, index }) => {
+      const color = colors[index] || [242, 140, 38];
+      const shade = Math.max(0.45, Math.min(1, 0.74 + point.z * 0.45));
+      ctx.fillStyle = `rgb(${Math.round(color[0] * shade)}, ${Math.round(color[1] * shade)}, ${Math.round(color[2] * shade)})`;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, Math.max(0.75, state.pointSize * point.p), 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  function drawMesh(points, model) {
+    const faces = [];
+
+    for (let i = 0; i < model.faces.length; i += 1) {
+      const face = model.faces[i];
+      const a = points[face[0]];
+      const b = points[face[1]];
+      const c = points[face[2]];
+      if (!a || !b || !c) continue;
+      faces.push({ face, depth: (a.z + b.z + c.z) / 3 });
+    }
+
+    faces.sort((a, b) => a.depth - b.depth);
+    faces.forEach(({ face, depth }) => {
+      const a = points[face[0]];
+      const b = points[face[1]];
+      const c = points[face[2]];
+      const colorA = model.colors[face[0]] || [170, 176, 184];
+      const colorB = model.colors[face[1]] || colorA;
+      const colorC = model.colors[face[2]] || colorA;
+      const baseColor = [
+        (colorA[0] + colorB[0] + colorC[0]) / 3,
+        (colorA[1] + colorB[1] + colorC[1]) / 3,
+        (colorA[2] + colorB[2] + colorC[2]) / 3
+      ];
+      const shade = Math.max(0.55, Math.min(1.18, 0.86 + depth * 0.28));
+      const faceColor = baseColor.map((channel) => Math.max(0, Math.min(255, Math.round(channel * shade))));
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineTo(c.x, c.y);
+      ctx.closePath();
+      ctx.fillStyle = `rgb(${faceColor[0]}, ${faceColor[1]}, ${faceColor[2]})`;
+      ctx.strokeStyle = ctx.fillStyle;
+      ctx.lineWidth = 0.8;
+      ctx.lineJoin = "round";
+      ctx.fill();
+      ctx.stroke();
+    });
+  }
+
+  function draw() {
+    state.frameRequested = false;
+    const rect = canvas.getBoundingClientRect();
+    drawBackground(rect.width, rect.height);
+    if (!state.model) return;
+
+    const points = state.model.vertices.map(project);
+    if (state.mode === "mesh" && state.model.faces.length) {
+      drawMesh(points, state.model);
+    } else {
+      drawPoints(points, state.model.colors);
+    }
+  }
+
+  function requestDraw() {
+    if (state.frameRequested) return;
+    state.frameRequested = true;
+    window.requestAnimationFrame(draw);
+  }
+
+  canvas.addEventListener("pointerdown", (event) => {
+    state.dragging = true;
+    state.lastX = event.clientX;
+    state.lastY = event.clientY;
+    canvas.setPointerCapture(event.pointerId);
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    if (!state.dragging) return;
+    const dx = event.clientX - state.lastX;
+    const dy = event.clientY - state.lastY;
+    state.angleY += dx * 0.01;
+    state.angleX += dy * 0.01;
+    state.lastX = event.clientX;
+    state.lastY = event.clientY;
+    requestDraw();
+  });
+
+  canvas.addEventListener("pointerup", () => {
+    state.dragging = false;
+  });
+
+  canvas.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    state.zoom = Math.max(0.58, Math.min(2.5, state.zoom * (event.deltaY > 0 ? 0.92 : 1.08)));
+    requestDraw();
+  }, { passive: false });
+
+  const resetButton = root.querySelector("[data-reset]");
+  if (resetButton) {
+    resetButton.addEventListener("click", () => {
+      state.angleX = state.initialAngleX;
+      state.angleY = state.initialAngleY;
+      state.zoom = state.initialZoom;
+      requestDraw();
+    });
+  }
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  let loaded = false;
+  function load() {
+    if (loaded) return;
+    loaded = true;
+    fetch(root.dataset.src)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
+      .then((text) => {
+        state.model = normalizeModel(parseAsciiPly(text), {
+          flipY: root.dataset.flipY !== undefined,
+          mode: state.mode
+        });
+        status.textContent = state.mode === "mesh"
+          ? `${state.model.vertices.length.toLocaleString("de-DE")} Punkte · ${state.model.faces.length.toLocaleString("de-DE")} Dreiecke`
+          : `${state.model.vertices.length.toLocaleString("de-DE")} Punkte`;
+        requestDraw();
+      })
+      .catch(() => {
+        status.textContent = "Modell konnte nicht geladen werden";
+      });
+  }
+
+  if ("IntersectionObserver" in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          load();
+          io.disconnect();
+        }
+      });
+    }, { rootMargin: "120px" });
+    io.observe(canvas);
+  } else {
+    load();
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // WebGL viewer is initialized by assets/js/model-viewer.js below.
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  const items = document.querySelectorAll(".lidar-accordion .lidar-item");
+  items.forEach((item) => {
+    item.addEventListener("toggle", () => {
+      if (item.open) {
+        items.forEach((other) => { if (other !== item) other.open = false; });
+        window.dispatchEvent(new Event("resize"));
+      }
+    });
+  });
+});
+</script>
+```
+
+```{=html}
+<script type="module" src="assets/js/model-viewer.js"></script>
+```

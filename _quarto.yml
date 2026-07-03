@@ -1,2 +1,57 @@
 project:
   type: website
+  output-dir: _site
+  render:
+    - index.qmd
+    - quarto/*.qmd
+    - "!vergleich_gefüllt.qmd"
+  resources:
+    - quarto/assets/**
+    - quarto/models/**
+    - code_praktischer_teil/**
+    - images/**
+    - literatur/**
+
+website:
+  title: "SfM & MVS"
+  description: "Von Fotos zu prazisen 3D-Modellen"
+  navbar:
+    left:
+      - text: "Home"
+        href: quarto/index.qmd
+      - text: "Motivation & Use-Cases"
+        href: quarto/einleitung.qmd
+      - text: "Theorie"
+        href: quarto/theorie.qmd
+      - text: "Methoden-Vergleich"
+        href: quarto/vergleich.qmd
+      - text: "Praktisches Beispiel"
+        href: quarto/hands-on.qmd
+      - text: "Quellen"
+        href: quarto/quellen.qmd
+    right:
+      - icon: github
+        href: https://gitlab.lrz.de/000000003B9C83F0/thema_2-sfm_mvs
+        aria-label: GitLab Repository
+  page-footer:
+    left: "Visual Computing · Hochschule München · SS 2026"
+    right: "Quarto Website zum Vertiefungsthema SfM & MVS"
+
+format:
+  html:
+    theme: none
+    css: styles.css
+    toc: true
+    toc-depth: 3
+    number-sections: false
+    smooth-scroll: true
+    code-copy: true
+    link-external-newwindow: true
+    fig-align: center
+    lightbox: true
+    include-after-body: quarto/assets/js/include-after-body.html
+
+execute:
+  freeze: auto
+
+editor: visual

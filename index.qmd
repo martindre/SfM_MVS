@@ -9,8 +9,8 @@ bibliography: references.bib
 ---
 
 ## Abstract
-Nach @knuth1984 ist TeX...
-This is a single-file Quarto website hosted on GitHub Pages. It combines Markdown text, LaTeX math, and interactive 3D elements.
+
+Nach @knuth1984 ist TeX... This is a single-file Quarto website hosted on GitHub Pages. It combines Markdown text, LaTeX math, and interactive 3D elements.
 
 ```{python}
 #| label: fig-polar
@@ -31,6 +31,7 @@ plt.show()
 ```
 
 ## Methodology
+
 You can include complex math like $$E = mc^2$$ and immediately follow it with an interactive 3D figure to visualize your results.
 
 ```{=html}

@@ -1,0 +1,296 @@
+---
+title: "SfM & MVS: Von Fotos zu präzisen 3D-Modellen"
+subtitle: "Startseite"
+format:
+  html:
+    toc: false
+    smooth-scroll: true
+---
+
+<style>
+.home-hero {
+  position: relative;
+  display: grid;
+  align-items: end;
+  min-height: clamp(430px, 64vh, 620px);
+  margin: 1rem 0 3rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  background: #172026;
+  box-shadow: 0 18px 44px rgba(23, 32, 38, 0.16);
+}
+
+.home-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(12, 18, 24, 0.84), rgba(12, 18, 24, 0.48) 48%, rgba(12, 18, 24, 0.08)),
+    linear-gradient(0deg, rgba(12, 18, 24, 0.42), rgba(12, 18, 24, 0));
+  z-index: 1;
+}
+
+.home-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    linear-gradient(135deg, rgba(43, 111, 243, 0.22), rgba(20, 143, 136, 0.14)),
+    radial-gradient(circle at 72% 45%, rgba(255, 255, 255, 0.16), transparent 34%);
+}
+
+.home-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #66d3c7;
+  margin-bottom: 0.55rem;
+}
+
+.home-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 760px;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  color: #fff;
+}
+
+.home-copy h1 {
+  font-size: clamp(2.7rem, 6vw, 5.7rem);
+  line-height: 0.96;
+  margin: 0 0 1rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 2px 18px rgba(255, 255, 255, 0.18);
+}
+
+.home-copy p {
+  max-width: 62ch;
+  font-size: clamp(1.02rem, 2vw, 1.22rem);
+  line-height: 1.7;
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.home-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.3rem;
+}
+
+.home-model {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.home-model canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.home-intro-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 2.5rem;
+}
+
+.home-card,
+.home-page-card,
+.home-pipeline {
+  padding: 1.25rem;
+  border: 1px solid var(--sfm-line, #d7e0e5);
+  border-radius: 8px;
+  background: var(--bs-body-bg, #fff);
+  box-shadow: 0 10px 28px rgba(23, 32, 38, 0.055);
+}
+
+.home-card h2 {
+  margin-top: 0;
+  font-size: 1.25rem;
+  color: var(--sfm-ink, #172026);
+}
+
+.home-card p,
+.home-card li {
+  line-height: 1.62;
+}
+
+.home-pipeline {
+  margin: 1.25rem 0 2.75rem;
+  background: #f7fafb;
+}
+
+.home-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 2rem;
+}
+
+.home-page-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.home-page-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 34px rgba(23, 32, 38, 0.1);
+  border-color: color-mix(in srgb, var(--sfm-blue, #1f6feb) 42%, var(--sfm-line, #d7e0e5));
+}
+
+.home-page-card a {
+  text-decoration: none;
+  color: var(--bs-body-color);
+}
+
+.home-page-card strong {
+  display: block;
+  color: var(--sfm-blue, #1f6feb);
+  font-size: 1.02rem;
+  margin-bottom: 0.45rem;
+}
+
+.home-page-card p {
+  margin-bottom: 0;
+  line-height: 1.55;
+  font-size: 0.94rem;
+}
+
+.home-section-lead {
+  max-width: 78ch;
+  line-height: 1.7;
+  font-size: 1.02rem;
+}
+
+@media (max-width: 1000px) {
+  .home-hero {
+    min-height: 520px;
+  }
+
+  .home-model {
+    position: absolute;
+  }
+
+  .home-copy {
+    max-width: 680px;
+  }
+
+  .home-page-grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .home-hero {
+    min-height: 500px;
+  }
+
+  .home-intro-grid,
+  .home-page-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+::: {.site-section-nav}
+[Home](index.qmd){.active}
+[Motivation & Use-Cases](einleitung.qmd)
+[Theorie](theorie.qmd)
+[Methoden-Vergleich](vergleich.qmd)
+[Praktisches Beispiel](hands-on.qmd)
+[Quellen](quellen.qmd)
+:::
+
+::: {.home-hero}
+```{=html}
+<div class="home-model" aria-hidden="true">
+  <canvas data-hero-model></canvas>
+</div>
+```
+
+::: {.home-copy}
+::: {.home-kicker}
+Visual Computing · SfM & MVS
+:::
+
+<h1>Von Fotos zu<br>3D-Modellen</h1>
+
+Ein moderenes und einfaches Verfahren um aus überlappenden Fotos präzise 3D-Modelle zu erzeugen.  
+
+
+:::
+:::
+
+```{=html}
+<script type="module" src="assets/js/hero-model.js"></script>
+```
+
+## Was ist SfM & MVS?
+
+::: {.home-intro-grid}
+::: {.home-card}
+## Structure-from-Motion
+
+SfM schätzt aus überlappenden Fotos, wo die Kameras standen und welche Bildpunkte dieselben realen 3D-Punkte zeigen. Daraus entstehen Kameraposen und eine sparse Punktwolke.
+:::
+
+::: {.home-card}
+## Multi-View Stereo
+
+MVS nutzt die bekannten Kameraposen, um Tiefeninformationen aus mehreren Bildern zu berechnen. So wird aus der sparse Punktwolke eine dichte Rekonstruktion mit Oberfläche und Textur.
+:::
+:::
+
+## Pipeline
+
+::: {.home-pipeline}
+```{mermaid}
+flowchart LR
+  A[Fotos] --> B[Features]
+  B --> C[Matching]
+  C --> D[SfM<br/>Kameras + sparse Punktwolke]
+  D --> E[MVS<br/>dichte Punktwolke]
+  E --> F[Mesh + Textur]
+  F --> G[Export<br/>CAD / GIS / BIM / Viewer]
+```
+:::
+
+## Struktur Website
+
+::: {.home-page-grid}
+::: {.home-page-card}
+[**Motivation & Use-Cases**](einleitung.qmd)
+
+Warum SfM/MVS relevant ist und in welchen Bereichen die Methode praktisch eingesetzt wird.
+:::
+
+::: {.home-page-card}
+[**Theorie**](theorie.qmd)
+
+Theoretischer Hintergrund zu Feature Matching, Epipolargeometrie, Triangulation, Bundle Adjustment und MVS.
+:::
+
+::: {.home-page-card}
+[**Methoden-Vergleich**](vergleich.qmd)
+
+Vergleich von SfM/MVS mit verwandten Verfahren wie NeRF und 3D Gaussian Splatting.
+:::
+
+::: {.home-page-card}
+[**Praktisches Beispiel**](hands-on.qmd)
+
+Platz für Beispielmodelle, Tool-Vergleich und einen nachvollziehbaren Workflow mit COLMAP, openMVG/OpenMVS oder Open3D.
+:::
+
+::: {.home-page-card}
+[**Quellen**](quellen.qmd)
+
+Gesammelte Literatur, Webquellen, Projektmaterialien und Asset-Hinweise der Website.
+:::
+:::

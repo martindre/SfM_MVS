@@ -1,0 +1,62 @@
+---
+title: "Quellen & Dokumente"
+subtitle: "Materialbasis der Website"
+format:
+  html:
+    toc: false
+---
+
+::: {.site-section-nav}
+[Home](index.qmd)
+[Motivation & Use-Cases](einleitung.qmd)
+[Theorie](theorie.qmd)
+[Methoden-Vergleich](vergleich.qmd)
+[Praktisches Beispiel](hands-on.qmd)
+[Quellen](quellen.qmd){.active}
+:::
+
+### Motivation & Use-Cases
+
+- COLMAP Dokumentation: SfM/MVS-Pipeline, Output-Formate, Tiefen- und Normalenkarten, Punktwolken und Meshes  
+  <https://colmap.github.io/>
+- COLMAP Output Format: Struktur der exportierten Kameras, Bilder, Punkte und dichten Rekonstruktionsergebnisse  
+  <https://colmap.github.io/format.html>
+- openMVG Dokumentation: Structure-from-Motion, Kameraposen, Triangulation und Bundle Adjustment  
+  <https://openmvg.readthedocs.io/en/latest/>
+- OpenMVG SfM-Modul: Details zur SfM-Pipeline und Rekonstruktion aus Bildkorrespondenzen  
+  <https://openmvg.readthedocs.io/en/latest/software/SfM/SfM/>
+- OpenMVS Projektseite: Dense Reconstruction, Mesh-Rekonstruktion und Texturierung nach SfM  
+  <https://cdcseacave.github.io/>
+- Open3D Dokumentation: Weiterverarbeitung, Analyse und Visualisierung von Punktwolken und Meshes  
+  <https://www.open3d.org/docs/latest/introduction.html>
+- Westoby et al.: Einsatz von low-cost Structure-from-Motion in Topographie und Geowissenschaften  
+  <https://pure.aber.ac.uk/ws/portalfiles/portal/4916016/Westoby_et_al._GEOMORPH_2012_Accepted.pdf>
+- Pix4D Vermessung & Kartierung: Praxisbezug zu Vermessung, Mapping, Orthomosaiken und digitalen Oberflächenmodellen  
+  <https://www.pix4d.com/de/industrie/vermessung-kartierung>
+- NIST Forensic Photogrammetry Guide: Anforderungen und Einsatzbereiche forensischer Photogrammetrie  
+  <https://www.nist.gov/document/osac-2021-s-0037-standard-guide-forensic-photogrammetry>
+- Bilderzeugung für Pipeline: Modell GPT-5.5  
+  Prompt: "Bitte erzeuge mir für die einzelnen Schritte der Pipeline jeweils ein anschauliches Beispiel Bild. Achte darauf, dass alle Bilder das gleiche Motiv verwenden und sich ein roter Faden durch die Bilder zieht"
+- Bilderzeugung für Use-Cases: Modell GPT-5.5  
+  Prompt: "Bitte erzeuge mir für die einzelnen Use-Cases jeweils ein Bild. In diesen soll ersichtlich sein für was SfM/MVS in diesen Bereichen verwendet wird."
+
+### Theorie
+
+- Szeliski, R. (2022). *Computer Vision: Algorithms and Applications*, 2nd Edition. Springer.
+- Schönberger, J. L., & Frahm, J.-M. (2016). Structure-from-Motion Revisited. *CVPR 2016*.
+- Schönberger, J. L., Zheng, E., Pollefeys, M., & Frahm, J.-M. (2016). Pixelwise View Selection for Unstructured Multi-View Stereo. *ECCV 2016*.
+- Zheng, E., Dunn, E., Jojic, V., & Frahm, J.-M. (2014). PatchMatch Based Joint View Selection and Depthmap Estimation. *CVPR 2014*.
+- Kazhdan, M., & Hoppe, H. (2013). Screened Poisson Surface Reconstruction. *ACM Transactions on Graphics*.
+
+### Methoden-Vergleich
+
+- NeRF - Neural Radiance Fields (Projektseite): <https://www.matthewtancik.com/nerf>
+- 3D Gaussian Splatting (Projektseite, Inria): <https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/>
+- Learning-based Multi-View Stereo: A Survey: <https://arxiv.org/abs/2408.15235>
+- COLMAP - allgemeine SfM/MVS-Pipeline: <https://colmap.github.io/>
+- Clini et al. (2024), Heritage-Vergleichsstudie SfM-MVS vs. NeRF vs. 3DGS (ISPRS): <https://isprs-archives.copernicus.org/articles/XLVIII-5-W3-2025/77/2025/>
+
+### Praktisches Beispiel
+
+- Open3D Dokumentation und Beispieldaten: <https://www.open3d.org/docs/latest/introduction.html>
+- COLMAP Dokumentation und Beispiel-Pipeline: <https://colmap.github.io/>
